@@ -230,6 +230,7 @@ llm-task-framework = { path = ".", editable = true }
 [tool.pixi.dependencies]
 python = ">=3.10,<3.13"
 
+
 # Development tasks
 [tool.pixi.tasks]
 install = "python -m pip install -e ."
@@ -350,10 +351,20 @@ docs = { features = ["dev", "docs"], solve-group = "default" }
 security = { features = ["dev", "security"], solve-group = "default" }
 full = { features = ["dev", "test", "docs", "security"], solve-group = "default" }
 
+# Production environment (minimal dependencies)
+prod = { features = ["prod"], solve-group = "prod" }
+
 # Python version environments
 py310 = { features = ["py310"], solve-group = "py310" }
 py311 = { features = ["py311"], solve-group = "py311" }
 py312 = { features = ["py312"], solve-group = "py312" }
+
+# Production feature dependencies
+[tool.pixi.feature.prod.dependencies]
+python = ">=3.10,<3.13"
+
+[tool.pixi.feature.prod.pypi-dependencies]
+llm-task-framework = { path = ".", editable = false }
 
 # Coverage configuration
 [tool.coverage.run]
