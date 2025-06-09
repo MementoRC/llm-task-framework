@@ -1,0 +1,278 @@
+[build-system]
+requires = ["hatchling>=1.21.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "llm-task-framework"
+description = "Generic framework for building LLM-powered task execution systems with built-in MCP server interface"
+readme = "README.md"
+license = { text = "MIT" }
+authors = [
+    { name = "LLM Task Framework Contributors" },
+]
+keywords = [
+    "llm",
+    "ai", 
+    "mcp",
+    "model-context-protocol",
+    "task-automation",
+    "anthropic",
+    "openai",
+    "framework"
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11", 
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development :: Testing",
+]
+requires-python = ">=3.10"
+dependencies = [
+    # Core framework dependencies
+    "pydantic>=2.0.0",
+    "rich>=13.0.0",
+    "click>=8.0.0",
+    
+    # MCP server dependencies
+    "mcp>=1.0.0",
+    "anyio>=4.0.0",
+    
+    # LLM provider dependencies
+    "anthropic>=0.25.0",
+    "openai>=1.12.0",
+    
+    # Async and performance
+    "asyncio-throttle>=1.0.0",
+    "aiofiles>=23.0.0",
+    
+    # Utilities
+    "pyyaml>=6.0.0",
+    "toml>=0.10.0",
+    "pathlib",
+    "dataclasses-json>=0.6.0",
+]
+dynamic = ["version"]
+
+[project.optional-dependencies]
+dev = [
+    # Testing
+    "pytest>=7.0.0",
+    "pytest-asyncio>=0.21.0",
+    "pytest-cov>=4.0.0",
+    "pytest-mock>=3.10.0",
+    
+    # Code quality
+    "ruff>=0.1.0",
+    "mypy>=1.5.0",
+    "pre-commit>=3.0.0",
+    
+    # Development tools
+    "hatch>=1.7.0",
+    "build>=0.10.0",
+    "twine>=4.0.0",
+]
+
+pytest_analysis = [
+    # Pytest-specific task dependencies
+    "pytest>=7.0.0",
+    "pytest-json-report>=1.5.0",
+    "pytest-html>=3.1.0",
+]
+
+docstring_generation = [
+    # Docstring generation task dependencies
+    "ast-decompiler>=0.7.0",
+    "black>=23.0.0",
+    "libcst>=1.0.0",
+]
+
+all = [
+    "llm-task-framework[dev,pytest_analysis,docstring_generation]"
+]
+
+[project.urls]
+Homepage = "https://github.com/yourusername/llm-task-framework"
+Documentation = "https://llm-task-framework.readthedocs.io"
+Repository = "https://github.com/yourusername/llm-task-framework.git"
+Issues = "https://github.com/yourusername/llm-task-framework/issues"
+
+[project.scripts]
+llm-task-framework = "llm_task_framework.cli.main:main"
+ltf = "llm_task_framework.cli.main:main"
+
+[tool.hatch.version]
+path = "src/llm_task_framework/__version__.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/llm_task_framework"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/src",
+    "/tests",
+    "/docs",
+    "/examples",
+    "README.md",
+    "LICENSE",
+    "pyproject.toml",
+]
+
+[tool.hatch.envs.default]
+dependencies = [
+    "pytest>=7.0.0",
+    "pytest-asyncio>=0.21.0",
+    "pytest-cov>=4.0.0",
+    "ruff>=0.1.0",
+    "mypy>=1.5.0",
+]
+
+[tool.hatch.envs.default.scripts]
+test = "pytest {args:tests}"
+test-cov = "pytest --cov=llm_task_framework --cov-report=html --cov-report=term {args:tests}"
+lint = "ruff check {args:src tests}"
+lint-fix = "ruff check --fix {args:src tests}"
+format = "ruff format {args:src tests}"
+type-check = "mypy {args:src}"
+check = [
+    "lint",
+    "type-check", 
+    "test"
+]
+
+[tool.hatch.envs.docs]
+dependencies = [
+    "mkdocs>=1.5.0",
+    "mkdocs-material>=9.0.0",
+    "mkdocs-mermaid2-plugin>=1.0.0",
+]
+
+[tool.hatch.envs.docs.scripts]
+build = "mkdocs build"
+serve = "mkdocs serve --dev-addr localhost:8000"
+
+# Testing configuration
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "--strict-markers",
+    "--strict-config",
+    "--verbose",
+    "-ra",
+    "--cov=llm_task_framework",
+    "--cov-branch",
+    "--cov-report=term-missing:skip-covered",
+    "--cov-fail-under=80",
+]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
+    "mcp: marks tests as MCP server tests",
+    "llm: marks tests that require LLM API access",
+]
+asyncio_mode = "auto"
+
+# Linting configuration
+[tool.ruff]
+target-version = "py310"
+line-length = 88
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = [
+    "E",  # pycodestyle errors
+    "W",  # pycodestyle warnings
+    "F",  # pyflakes
+    "I",  # isort
+    "B",  # flake8-bugbear
+    "C4", # flake8-comprehensions
+    "UP", # pyupgrade
+    "ARG", # flake8-unused-arguments
+    "SIM", # flake8-simplify
+    "TCH", # flake8-type-checking
+]
+ignore = [
+    "E501",  # line too long, handled by formatter
+    "B008",  # do not perform function calls in argument defaults
+    "C901",  # too complex
+    "ARG002", # unused method argument
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*" = ["ARG", "S101"] # Allow unused arguments and assert statements in tests
+
+[tool.ruff.lint.isort]
+known-first-party = ["llm_task_framework"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+
+# Type checking configuration
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+warn_unreachable = true
+strict_equality = true
+show_error_codes = true
+
+[[tool.mypy.overrides]]
+module = "tests.*"
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+disallow_untyped_decorators = false
+
+[[tool.mypy.overrides]]
+module = [
+    "mcp.*",
+    "anthropic.*", 
+    "openai.*",
+    "rich.*",
+    "click.*",
+]
+ignore_missing_imports = true
+
+# Coverage configuration
+[tool.coverage.run]
+source = ["llm_task_framework"]
+branch = true
+omit = [
+    "*/tests/*",
+    "*/test_*",
+    "*/__main__.py",
+    "*/cli/*",  # CLI often hard to test comprehensively
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if self.debug:",
+    "if settings.DEBUG",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if 0:",
+    "if __name__ == .__main__.:",
+    "class .*\\bProtocol\\):",
+    "@(abc\\.)?abstractmethod",
+]
