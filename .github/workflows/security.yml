@@ -1,0 +1,207 @@
+name: Security
+
+on:
+  push:
+    branches: [ main, master, develop ]
+  pull_request:
+    branches: [ main, master, develop ]
+  schedule:
+    # Run weekly security scans
+    - cron: '0 2 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+
+jobs:
+  codeql-analysis:
+    name: CodeQL Analysis
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    
+    strategy:
+      fail-fast: false
+      matrix:
+        language: ['python']
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Initialize CodeQL
+      uses: github/codeql-action/init@v3
+      with:
+        languages: ${{ matrix.language }}
+        queries: security-extended,security-and-quality
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.11"
+    
+    - name: Install dependencies
+      run: |
+        pip install hatch
+        hatch run pip install -e .
+    
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@v3
+      with:
+        category: "/language:${{matrix.language}}"
+
+  dependency-scan:
+    name: Dependency Security Scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.11"
+    
+    - name: Install security tools
+      run: |
+        pip install hatch
+        hatch run pip install safety bandit[toml] pip-audit
+    
+    - name: Run Safety check
+      run: |
+        hatch run safety check --json --output safety-report.json || true
+        echo "Safety scan completed"
+    
+    - name: Run pip-audit
+      run: |
+        hatch run pip-audit --format=json --output=pip-audit-report.json || true
+        echo "pip-audit scan completed"
+    
+    - name: Run Bandit security linter
+      run: |
+        hatch run bandit -r src/ -f json -o bandit-report.json || true
+        echo "Bandit scan completed"
+    
+    - name: Upload security reports
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: security-scan-reports
+        path: |
+          safety-report.json
+          pip-audit-report.json
+          bandit-report.json
+        retention-days: 90
+
+  secret-detection:
+    name: Secret Detection
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.11"
+    
+    - name: Install detect-secrets
+      run: pip install detect-secrets
+    
+    - name: Run secrets baseline scan
+      run: |
+        detect-secrets scan --all-files --force-use-all-plugins \
+          --baseline .secrets.baseline || true
+    
+    - name: Verify secrets baseline
+      run: |
+        if [ -f .secrets.baseline ]; then
+          detect-secrets audit .secrets.baseline || true
+        else
+          echo "No secrets baseline found"
+        fi
+
+  license-check:
+    name: License Compliance
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.11"
+    
+    - name: Install license checker
+      run: |
+        pip install hatch
+        hatch run pip install pip-licenses
+    
+    - name: Check licenses
+      run: |
+        hatch run pip-licenses --format=json --output-file=licenses.json
+        hatch run pip-licenses --format=plain-vertical
+    
+    - name: Upload license report
+      uses: actions/upload-artifact@v4
+      with:
+        name: license-report
+        path: licenses.json
+        retention-days: 30
+
+  supply-chain-security:
+    name: Supply Chain Security
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.11"
+    
+    - name: Verify package integrity
+      run: |
+        pip install hatch
+        hatch build
+        # Check for suspicious files in build
+        find dist/ -type f -name "*.whl" -exec unzip -l {} \; > package-contents.txt
+        find dist/ -type f -name "*.tar.gz" -exec tar -tzf {} \; >> package-contents.txt
+    
+    - name: Upload package analysis
+      uses: actions/upload-artifact@v4
+      with:
+        name: package-analysis
+        path: package-contents.txt
+        retention-days: 30
+
+  security-summary:
+    name: Security Summary
+    runs-on: ubuntu-latest
+    needs: [codeql-analysis, dependency-scan, secret-detection, license-check, supply-chain-security]
+    if: always()
+    
+    steps:
+    - name: Security scan summary
+      run: |
+        echo "## Security Scan Summary" >> $GITHUB_STEP_SUMMARY
+        echo "| Scan Type | Status |" >> $GITHUB_STEP_SUMMARY
+        echo "|-----------|--------|" >> $GITHUB_STEP_SUMMARY
+        echo "| CodeQL Analysis | ${{ needs.codeql-analysis.result }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| Dependency Scan | ${{ needs.dependency-scan.result }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| Secret Detection | ${{ needs.secret-detection.result }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| License Check | ${{ needs.license-check.result }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| Supply Chain | ${{ needs.supply-chain-security.result }} |" >> $GITHUB_STEP_SUMMARY

@@ -1,0 +1,261 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, master, develop ]
+  pull_request:
+    branches: [ main, master, develop ]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHONPATH: src
+  PYTHONUNBUFFERED: "1"
+  FORCE_COLOR: "1"
+
+jobs:
+  quality-checks:
+    name: Quality Checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.11"
+    
+    - name: Install Hatch
+      run: pip install hatch
+    
+    - name: Check code formatting
+      run: hatch run lint
+    
+    - name: Run type checking
+      run: hatch run type-check
+    
+    - name: Check for security vulnerabilities
+      run: |
+        hatch run pip install bandit[toml] safety
+        hatch run bandit -r src/ -f json -o bandit-report.json || true
+        hatch run safety check --json --output safety-report.json || true
+    
+    - name: Upload security reports
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: security-reports
+        path: |
+          bandit-report.json
+          safety-report.json
+        retention-days: 30
+
+  test:
+    name: Test Python ${{ matrix.python-version }} on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: ["3.10", "3.11", "3.12"]
+        exclude:
+          # Skip some combinations for faster CI
+          - os: windows-latest
+            python-version: "3.10"
+          - os: macos-latest
+            python-version: "3.10"
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+    
+    - name: Install Hatch
+      run: pip install hatch
+    
+    - name: Run tests with coverage
+      run: hatch run test-cov
+      env:
+        # Disable LLM tests in CI unless API keys provided
+        SKIP_LLM_TESTS: ${{ !secrets.ANTHROPIC_API_KEY && !secrets.OPENAI_API_KEY }}
+    
+    - name: Upload coverage to Codecov
+      if: matrix.python-version == '3.11' && matrix.os == 'ubuntu-latest'
+      uses: codecov/codecov-action@v3
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        file: ./coverage.xml
+        flags: unittests
+        name: codecov-umbrella
+        fail_ci_if_error: false
+
+  integration-tests:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: [quality-checks]
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.11"
+    
+    - name: Install Hatch
+      run: pip install hatch
+    
+    - name: Run integration tests
+      run: hatch run pytest -m integration --verbose
+      env:
+        ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+    
+    - name: Run MCP server tests
+      run: hatch run pytest -m mcp --verbose
+
+  build-and-test-package:
+    name: Build and Test Package
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: [test]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.11"
+    
+    - name: Install build tools
+      run: pip install hatch build twine
+    
+    - name: Build package
+      run: hatch build
+    
+    - name: Check package
+      run: twine check dist/*
+    
+    - name: Test package installation
+      run: |
+        pip install dist/*.whl
+        python -c "import llm_task_framework; print('Package imported successfully')"
+        llm-task-framework --help
+    
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: dist-packages
+        path: dist/
+        retention-days: 30
+
+  # Performance baseline (non-blocking)
+  performance:
+    name: Performance Baseline
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: [test]
+    continue-on-error: true
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.11"
+    
+    - name: Install Hatch and dependencies
+      run: |
+        pip install hatch
+        hatch run pip install pytest-benchmark
+    
+    - name: Run performance tests
+      run: hatch run pytest -m "not slow" --benchmark-only --benchmark-json=benchmark.json
+    
+    - name: Upload benchmark results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: benchmark-results
+        path: benchmark.json
+        retention-days: 30
+
+  # Documentation build check
+  docs:
+    name: Documentation
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.11"
+    
+    - name: Install Hatch
+      run: pip install hatch
+    
+    - name: Build documentation
+      run: hatch run docs:build
+    
+    - name: Upload documentation
+      uses: actions/upload-artifact@v4
+      with:
+        name: documentation
+        path: site/
+        retention-days: 30
+
+  # Final status check
+  ci-success:
+    name: CI Success
+    runs-on: ubuntu-latest
+    needs: [quality-checks, test, integration-tests, build-and-test-package, docs]
+    if: always()
+    
+    steps:
+    - name: Check CI status
+      run: |
+        if [[ "${{ needs.quality-checks.result }}" != "success" ]]; then
+          echo "Quality checks failed"
+          exit 1
+        fi
+        if [[ "${{ needs.test.result }}" != "success" ]]; then
+          echo "Tests failed"
+          exit 1
+        fi
+        if [[ "${{ needs.integration-tests.result }}" != "success" && "${{ needs.integration-tests.result }}" != "skipped" ]]; then
+          echo "Integration tests failed"
+          exit 1
+        fi
+        if [[ "${{ needs.build-and-test-package.result }}" != "success" ]]; then
+          echo "Package build failed"
+          exit 1
+        fi
+        if [[ "${{ needs.docs.result }}" != "success" ]]; then
+          echo "Documentation build failed"
+          exit 1
+        fi
+        echo "All CI checks passed!"

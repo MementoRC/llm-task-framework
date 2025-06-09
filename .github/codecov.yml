@@ -1,0 +1,39 @@
+coverage:
+  precision: 2
+  round: down
+  range: "80...95"
+  
+  status:
+    project:
+      default:
+        target: 85%
+        threshold: 2%
+        base: auto
+    patch:
+      default:
+        target: 80%
+        threshold: 5%
+    changes: false
+
+parsers:
+  gcov:
+    branch_detection:
+      conditional: yes
+      loop: yes
+      method: no
+      macro: no
+
+comment:
+  layout: "reach,diff,flags,tree,reach"
+  behavior: default
+  require_changes: false
+  require_base: no
+  require_head: yes
+
+ignore:
+  - "tests/"
+  - "examples/"
+  - "docs/"
+  - "scripts/"
+  - "**/__main__.py"
+  - "**/cli/*"
