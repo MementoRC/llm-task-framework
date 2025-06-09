@@ -252,6 +252,102 @@ module = [
 ]
 ignore_missing_imports = true
 
+# Pixi project configuration
+[tool.pixi.project]
+name = "llm-task-framework"
+channels = ["conda-forge", "pytorch"]
+platforms = ["linux-64", "osx-64", "osx-arm64", "win-64"]
+
+[tool.pixi.pypi-dependencies]
+llm-task-framework = { path = ".", editable = true }
+
+[tool.pixi.dependencies]
+python = ">=3.10,<3.13"
+
+# Development tasks
+[tool.pixi.tasks]
+install = "python -m pip install -e ."
+clean = "rm -rf build/ dist/ *.egg-info/ .pytest_cache/ .coverage htmlcov/ .mypy_cache/ .ruff_cache/"
+
+# Testing tasks
+test = "pytest"
+test-cov = "pytest --cov=llm_task_framework --cov-report=html --cov-report=term --cov-report=xml"
+test-fast = "pytest -x -q"
+test-integration = "pytest -m integration"
+test-mcp = "pytest -m mcp"
+test-llm = "pytest -m llm"
+
+# Code quality tasks
+lint = "ruff check src tests"
+lint-fix = "ruff check --fix src tests"
+format = "ruff format src tests"
+format-check = "ruff format --check src tests"
+typecheck = "mypy src"
+
+# Combined quality checks
+check = { depends-on = ["lint", "typecheck", "test"] }
+check-fast = { depends-on = ["lint", "typecheck", "test-fast"] }
+
+# Security tasks  
+security-scan = "bandit -r src/"
+security-deps = "safety check"
+security-audit = "pip-audit"
+security-secrets = "detect-secrets scan --all-files"
+security-all = { depends-on = ["security-scan", "security-deps", "security-audit", "security-secrets"] }
+
+# Documentation tasks
+docs-build = "mkdocs build"
+docs-serve = "mkdocs serve --dev-addr localhost:8000"
+docs-deploy = "mkdocs gh-deploy"
+
+# Build and release tasks
+build = "python -m build"
+build-wheel = "python -m build --wheel"
+build-sdist = "python -m build --sdist"
+upload-test = "twine upload --repository testpypi dist/*"
+upload = "twine upload dist/*"
+
+# Pre-commit tasks
+pre-commit-install = "pre-commit install"
+pre-commit-run = "pre-commit run --all-files"
+pre-commit-update = "pre-commit autoupdate"
+
+# Docker tasks
+docker-build = "docker build -t llm-task-framework ."
+docker-run = "docker run --rm -it llm-task-framework"
+
+# Project maintenance
+deps-update = "pixi update"
+deps-tree = "pixi tree"
+deps-list = "pixi list"
+
+# Development workflow shortcuts
+dev-setup = { depends-on = ["install", "pre-commit-install"] }
+ci-local = { depends-on = ["format-check", "lint", "typecheck", "test-cov", "security-all"] }
+
+# Note: Dependencies are managed through standard pyproject.toml sections
+# Pixi features are used only for environment management and task organization
+
+# Python version features
+[tool.pixi.feature.py310.dependencies]
+python = "3.10.*"
+
+[tool.pixi.feature.py311.dependencies]
+python = "3.11.*"
+
+[tool.pixi.feature.py312.dependencies]
+python = "3.12.*"
+
+# Environments
+[tool.pixi.environments]
+# Default development environment  
+default = { solve-group = "default" }
+
+# Python version environments
+py310 = { features = ["py310"], solve-group = "py310" }
+py311 = { features = ["py311"], solve-group = "py311" } 
+py312 = { features = ["py312"], solve-group = "py312" }
+
 # Coverage configuration
 [tool.coverage.run]
 source = ["llm_task_framework"]
