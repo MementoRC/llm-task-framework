@@ -1,0 +1,119 @@
+name: Feature Branch
+
+on:
+  pull_request:
+    branches: [ development ]
+    types: [opened, synchronize, reopened, ready_for_review]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHONPATH: src
+  PYTHONUNBUFFERED: "1"
+  FORCE_COLOR: "1"
+
+jobs:
+  # Fast feedback for feature branches
+  feature-validation:
+    name: Feature Branch Validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    if: github.event.pull_request.draft == false
+    
+    steps:
+    - name: Checkout PR
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ github.event.pull_request.head.sha }}
+    
+    - name: Set up Pixi
+      uses: prefix-dev/setup-pixi@v0.8.1
+      with:
+        pixi-version: v0.34.0
+        cache: true
+        auth-host: conda.anaconda.org
+    
+    - name: Check code formatting
+      run: pixi run format-check
+    
+    - name: Run linting
+      run: pixi run lint
+    
+    - name: Run type checking
+      run: pixi run typecheck
+    
+    - name: Run tests
+      run: pixi run test-cov
+    
+    - name: Upload coverage
+      uses: codecov/codecov-action@v3
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        file: ./coverage.xml
+        flags: feature-branch
+        name: feature-branch-coverage
+
+  # Security check for feature branches
+  feature-security:
+    name: Feature Security Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    if: github.event.pull_request.draft == false
+    
+    steps:
+    - name: Checkout PR
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ github.event.pull_request.head.sha }}
+    
+    - name: Set up Pixi
+      uses: prefix-dev/setup-pixi@v0.8.1
+      with:
+        pixi-version: v0.34.0
+        cache: true
+        auth-host: conda.anaconda.org
+    
+    - name: Run security checks
+      run: pixi run -e security security-all
+      continue-on-error: true
+
+  # PR status check
+  feature-status:
+    name: Feature Branch Status
+    runs-on: ubuntu-latest
+    needs: [feature-validation, feature-security]
+    if: always() && github.event.pull_request.draft == false
+    
+    steps:
+    - name: PR Status Summary
+      run: |
+        echo "## Feature Branch Status" >> $GITHUB_STEP_SUMMARY
+        echo "| Check | Status |" >> $GITHUB_STEP_SUMMARY
+        echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
+        echo "| Validation | ${{ needs.feature-validation.result }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| Security | ${{ needs.feature-security.result }} |" >> $GITHUB_STEP_SUMMARY
+        
+        if [[ "${{ needs.feature-validation.result }}" == "success" ]]; then
+          echo "✅ **Feature branch ready for review**" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "❌ **Feature branch needs fixes**" >> $GITHUB_STEP_SUMMARY
+        fi
+
+  # Draft PR handling
+  draft-feedback:
+    name: Draft PR Feedback
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == true
+    
+    steps:
+    - name: Draft PR Message
+      run: |
+        echo "## Draft PR Status" >> $GITHUB_STEP_SUMMARY
+        echo "🚧 This is a draft PR - full validation will run when marked as ready for review." >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### Quick checks you can run locally:" >> $GITHUB_STEP_SUMMARY
+        echo "- \`pixi run format-check\` - Check code formatting" >> $GITHUB_STEP_SUMMARY
+        echo "- \`pixi run lint\` - Run linting" >> $GITHUB_STEP_SUMMARY
+        echo "- \`pixi run test-fast\` - Run quick tests" >> $GITHUB_STEP_SUMMARY
