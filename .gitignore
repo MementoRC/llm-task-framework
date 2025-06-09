@@ -76,6 +76,10 @@ logs/
 
 # MCP server files
 mcp_server.pid
+.mcp.json
+
+# Claude configuration
+.claude/
 
 # Development
 .aider*
