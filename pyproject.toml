@@ -60,42 +60,8 @@ dependencies = [
 ]
 dynamic = ["version"]
 
-[project.optional-dependencies]
-dev = [
-    # Testing
-    "pytest>=7.0.0",
-    "pytest-asyncio>=0.21.0",
-    "pytest-cov>=4.0.0",
-    "pytest-mock>=3.10.0",
-    
-    # Code quality
-    "ruff>=0.1.0",
-    "mypy>=1.5.0",
-    "pre-commit>=3.0.0",
-    
-    # Development tools
-    "hatch>=1.7.0",
-    "build>=0.10.0",
-    "twine>=4.0.0",
-]
-
-pytest_analysis = [
-    # Pytest-specific task dependencies
-    "pytest>=7.0.0",
-    "pytest-json-report>=1.5.0",
-    "pytest-html>=3.1.0",
-]
-
-docstring_generation = [
-    # Docstring generation task dependencies
-    "ast-decompiler>=0.7.0",
-    "black>=23.0.0",
-    "libcst>=1.0.0",
-]
-
-all = [
-    "llm-task-framework[dev,pytest_analysis,docstring_generation]"
-]
+# Note: Development dependencies are managed through Pixi features
+# This avoids conflicts between pyproject.toml and Pixi dependency management
 
 [project.urls]
 Homepage = "https://github.com/yourusername/llm-task-framework"
@@ -325,6 +291,41 @@ deps-list = "pixi list"
 dev-setup = { depends-on = ["install", "pre-commit-install"] }
 ci-local = { depends-on = ["format-check", "lint", "typecheck", "test-cov", "security-all"] }
 
+# Development feature with all dev dependencies
+[tool.pixi.feature.dev.pypi-dependencies]
+# Testing
+pytest = ">=7.0.0"
+pytest-asyncio = ">=0.21.0"
+pytest-cov = ">=4.0.0"
+pytest-mock = ">=3.10.0"
+
+# Code quality
+ruff = ">=0.1.0"
+mypy = ">=1.5.0"
+pre-commit = ">=3.0.0"
+
+# Development tools
+build = ">=0.10.0"
+twine = ">=4.0.0"
+
+[tool.pixi.feature.test.pypi-dependencies]
+# Additional testing tools
+pytest-json-report = ">=1.5.0"
+pytest-html = ">=3.1.0"
+
+[tool.pixi.feature.docs.pypi-dependencies]
+# Documentation dependencies
+mkdocs = ">=1.5.0"
+mkdocs-material = ">=9.0.0"
+mkdocs-mermaid2-plugin = ">=1.0.0"
+
+[tool.pixi.feature.security.pypi-dependencies]
+# Security scanning tools
+bandit = { version = ">=1.7.0", extras = ["toml"] }
+safety = ">=2.0.0"
+pip-audit = ">=2.0.0"
+detect-secrets = ">=1.4.0"
+
 # Python version features
 [tool.pixi.feature.py310.dependencies]
 python = "3.10.*"
@@ -340,12 +341,12 @@ python = "3.12.*"
 # Default development environment  
 default = { solve-group = "default" }
 
-# Simplified environments without feature references
-dev = { solve-group = "default" }
-test = { solve-group = "default" }
-docs = { solve-group = "default" }
-security = { solve-group = "default" }
-full = { solve-group = "default" }
+# Development environments with feature references
+dev = { features = ["dev"], solve-group = "default" }
+test = { features = ["dev", "test"], solve-group = "default" }
+docs = { features = ["dev", "docs"], solve-group = "default" }
+security = { features = ["dev", "security"], solve-group = "default" }
+full = { features = ["dev", "test", "docs", "security"], solve-group = "default" }
 
 # Python version environments
 py310 = { features = ["py310"], solve-group = "py310" }

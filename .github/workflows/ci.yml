@@ -35,13 +35,13 @@ jobs:
         cache: true
     
     - name: Check code formatting
-      run: pixi run format-check
+      run: pixi run -e dev format-check
     
     - name: Run linting
-      run: pixi run lint
+      run: pixi run -e dev lint
     
     - name: Run type checking
-      run: pixi run typecheck
+      run: pixi run -e dev typecheck
     
     - name: Run security scans
       run: pixi run -e security security-all
@@ -83,7 +83,7 @@ jobs:
         cache: true
     
     - name: Run tests with coverage
-      run: pixi run test-cov
+      run: pixi run -e dev test-cov
       env:
         # Disable LLM tests in CI unless API keys provided
         SKIP_LLM_TESTS: ${{ !secrets.ANTHROPIC_API_KEY && !secrets.OPENAI_API_KEY }}
@@ -116,13 +116,13 @@ jobs:
         cache: true
     
     - name: Run integration tests
-      run: pixi run test-integration
+      run: pixi run -e dev test-integration
       env:
         ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
     
     - name: Run MCP server tests
-      run: pixi run test-mcp
+      run: pixi run -e dev test-mcp
 
   build-and-test-package:
     name: Build and Test Package
@@ -141,7 +141,7 @@ jobs:
         cache: true
     
     - name: Build package
-      run: pixi run build
+      run: pixi run -e dev build
     
     - name: Check package
       run: pixi run -e dev sh -c "pip install twine && twine check dist/*"
@@ -208,7 +208,7 @@ jobs:
         cache: true
     
     - name: Build documentation
-      run: pixi run -e docs docs-build
+      run: pixi run -e dev docs-build
     
     - name: Upload documentation
       uses: actions/upload-artifact@v4
