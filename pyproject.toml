@@ -325,9 +325,6 @@ deps-list = "pixi list"
 dev-setup = { depends-on = ["install", "pre-commit-install"] }
 ci-local = { depends-on = ["format-check", "lint", "typecheck", "test-cov", "security-all"] }
 
-# Note: Dependencies are managed through standard pyproject.toml sections
-# Pixi features are used only for environment management and task organization
-
 # Python version features
 [tool.pixi.feature.py310.dependencies]
 python = "3.10.*"
@@ -342,6 +339,13 @@ python = "3.12.*"
 [tool.pixi.environments]
 # Default development environment  
 default = { solve-group = "default" }
+
+# Simplified environments without feature references
+dev = { solve-group = "default" }
+test = { solve-group = "default" }
+docs = { solve-group = "default" }
+security = { solve-group = "default" }
+full = { solve-group = "default" }
 
 # Python version environments
 py310 = { features = ["py310"], solve-group = "py310" }
