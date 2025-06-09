@@ -7,20 +7,26 @@ different task types while maintaining flexibility for task-specific logic.
 """
 
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional, Protocol, runtime_checkable
+from typing import Any, Protocol, runtime_checkable
 
 
 # Base data models
 class TaskInput(ABC):
     """Base class for task input data."""
 
-    pass
+    @abstractmethod
+    def validate(self) -> bool:
+        """Validate the input data."""
+        pass
 
 
 class TaskResult(ABC):
     """Base class for task results."""
 
-    pass
+    @abstractmethod
+    def serialize(self) -> dict[str, Any]:
+        """Serialize the result data."""
+        pass
 
 
 # Core task component protocols
@@ -34,7 +40,7 @@ class TaskExtractor(Protocol):
     structured data that can be processed by analyzers.
     """
 
-    def extract(self, input_data: TaskInput) -> Dict[str, Any]:
+    def extract(self, input_data: TaskInput) -> dict[str, Any]:
         """
         Extract structured data from input.
 
@@ -60,7 +66,7 @@ class TaskAnalyzer(Protocol):
     generation.
     """
 
-    def analyze(self, extraction_results: Dict[str, Any]) -> Dict[str, Any]:
+    def analyze(self, extraction_results: dict[str, Any]) -> dict[str, Any]:
         """
         Analyze extracted data to understand context and patterns.
 
@@ -86,7 +92,7 @@ class TaskSuggester(Protocol):
     intelligent recommendations.
     """
 
-    def suggest(self, analysis_results: Dict[str, Any]) -> List[Dict[str, Any]]:
+    def suggest(self, analysis_results: dict[str, Any]) -> list[dict[str, Any]]:
         """
         Generate suggestions based on analysis results.
 
@@ -114,9 +120,9 @@ class TaskApplier(Protocol):
 
     def apply(
         self,
-        suggestions: List[Dict[str, Any]],
-        validation_tests: Optional[List[str]] = None,
-    ) -> Dict[str, Any]:
+        suggestions: list[dict[str, Any]],
+        validation_tests: list[str] | None = None,
+    ) -> dict[str, Any]:
         """
         Apply suggestions to target resources.
 
@@ -144,7 +150,7 @@ class TaskExecutor(Protocol):
     """
 
     def execute(
-        self, input_data: TaskInput, context: Optional[Dict[str, Any]] = None
+        self, input_data: TaskInput, context: dict[str, Any] | None = None
     ) -> TaskResult:
         """
         Execute the complete task workflow.
@@ -171,7 +177,7 @@ class TaskValidator(Protocol):
     results are properly formatted and valid.
     """
 
-    def validate_input(self, input_data: TaskInput) -> Dict[str, Any]:
+    def validate_input(self, input_data: TaskInput) -> dict[str, Any]:
         """
         Validate task input data.
 
@@ -186,7 +192,7 @@ class TaskValidator(Protocol):
         """
         ...
 
-    def validate_result(self, result: TaskResult) -> Dict[str, Any]:
+    def validate_result(self, result: TaskResult) -> dict[str, Any]:
         """
         Validate task result data.
 
@@ -215,8 +221,8 @@ class LLMService(Protocol):
     def generate_completion(
         self,
         prompt: str,
-        max_tokens: Optional[int] = None,
-        temperature: Optional[float] = None,
+        max_tokens: int | None = None,
+        temperature: float | None = None,
         **kwargs: Any,
     ) -> str:
         """
@@ -239,8 +245,8 @@ class LLMService(Protocol):
     async def generate_completion_async(
         self,
         prompt: str,
-        max_tokens: Optional[int] = None,
-        temperature: Optional[float] = None,
+        max_tokens: int | None = None,
+        temperature: float | None = None,
         **kwargs: Any,
     ) -> str:
         """
@@ -271,11 +277,11 @@ class TaskState(Protocol):
         """Get the name of the state."""
         ...
 
-    def on_enter(self, context: Dict[str, Any]) -> None:
+    def on_enter(self, context: dict[str, Any]) -> None:
         """Execute actions when entering the state."""
         ...
 
-    def on_exit(self, context: Dict[str, Any]) -> None:
+    def on_exit(self, context: dict[str, Any]) -> None:
         """Execute actions when exiting the state."""
         ...
 
@@ -312,10 +318,10 @@ class TaskMetadata:
         name: str,
         description: str,
         version: str,
-        input_schema: Dict[str, Any],
-        output_schema: Dict[str, Any],
-        dependencies: Optional[List[str]] = None,
-        tags: Optional[List[str]] = None,
+        input_schema: dict[str, Any],
+        output_schema: dict[str, Any],
+        dependencies: list[str] | None = None,
+        tags: list[str] | None = None,
     ):
         self.name = name
         self.description = description
@@ -361,7 +367,7 @@ class TaskDefinition(Protocol):
         ...
 
     @property
-    def validator(self) -> Optional[TaskValidator]:
+    def validator(self) -> TaskValidator | None:
         """Get the task validator (optional)."""
         ...
 

@@ -1,16 +1,13 @@
 """Core framework components."""
 
 from .protocols import (
-    TaskExtractor,
     TaskAnalyzer,
-    TaskSuggester,
     TaskApplier,
+    TaskExtractor,
     TaskInput,
     TaskResult,
+    TaskSuggester,
 )
-from .models.config import TaskConfig
-from .facade import TaskFramework
-from .registry import TaskRegistry
 
 __all__ = [
     "TaskExtractor",
@@ -19,7 +16,4 @@ __all__ = [
     "TaskApplier",
     "TaskInput",
     "TaskResult",
-    "TaskConfig",
-    "TaskFramework",
-    "TaskRegistry",
 ]

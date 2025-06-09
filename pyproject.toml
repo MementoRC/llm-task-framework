@@ -12,7 +12,7 @@ authors = [
 ]
 keywords = [
     "llm",
-    "ai", 
+    "ai",
     "mcp",
     "model-context-protocol",
     "task-automation",
@@ -27,7 +27,7 @@ classifiers = [
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11", 
+    "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Topic :: Software Development :: Libraries :: Python Modules",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
@@ -39,19 +39,19 @@ dependencies = [
     "pydantic>=2.0.0",
     "rich>=13.0.0",
     "click>=8.0.0",
-    
+
     # MCP server dependencies
     "mcp>=1.0.0",
     "anyio>=4.0.0",
-    
+
     # LLM provider dependencies
     "anthropic>=0.25.0",
     "openai>=1.12.0",
-    
+
     # Async and performance
     "asyncio-throttle>=1.0.0",
     "aiofiles>=23.0.0",
-    
+
     # Utilities
     "pyyaml>=6.0.0",
     "toml>=0.10.0",
@@ -108,7 +108,7 @@ format = "ruff format {args:src tests}"
 type-check = "mypy {args:src}"
 check = [
     "lint",
-    "type-check", 
+    "type-check",
     "test"
 ]
 
@@ -211,7 +211,7 @@ disallow_untyped_decorators = false
 [[tool.mypy.overrides]]
 module = [
     "mcp.*",
-    "anthropic.*", 
+    "anthropic.*",
     "openai.*",
     "rich.*",
     "click.*",
@@ -254,7 +254,7 @@ typecheck = "mypy src"
 check = { depends-on = ["lint", "typecheck", "test"] }
 check-fast = { depends-on = ["lint", "typecheck", "test-fast"] }
 
-# Security tasks  
+# Security tasks
 security-scan = "bandit -r src/"
 security-deps = "safety check"
 security-audit = "pip-audit"
@@ -338,7 +338,7 @@ python = "3.12.*"
 
 # Environments
 [tool.pixi.environments]
-# Default development environment  
+# Default development environment
 default = { solve-group = "default" }
 
 # Development environments with feature references
@@ -350,7 +350,7 @@ full = { features = ["dev", "test", "docs", "security"], solve-group = "default"
 
 # Python version environments
 py310 = { features = ["py310"], solve-group = "py310" }
-py311 = { features = ["py311"], solve-group = "py311" } 
+py311 = { features = ["py311"], solve-group = "py311" }
 py312 = { features = ["py312"], solve-group = "py312" }
 
 # Coverage configuration
@@ -377,3 +377,8 @@ exclude_lines = [
     "class .*\\bProtocol\\):",
     "@(abc\\.)?abstractmethod",
 ]
+
+# Bandit security configuration
+[tool.bandit]
+exclude_dirs = ["tests"]
+skips = ["B101"]  # Skip assert_used warnings
