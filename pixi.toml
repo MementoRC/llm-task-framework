@@ -1,0 +1,179 @@
+[project]
+name = "llm-task-framework"
+description = "Generic framework for building LLM-powered task execution systems with built-in MCP server interface"
+authors = ["LLM Task Framework Contributors"]
+channels = ["conda-forge", "pytorch"]
+platforms = ["linux-64", "osx-64", "osx-arm64", "win-64"]
+license = "MIT"
+readme = "README.md"
+homepage = "https://github.com/MementoRC/llm-task-framework"
+repository = "https://github.com/MementoRC/llm-task-framework"
+
+[pypi-dependencies]
+# Core framework dependencies
+llm-task-framework = { path = ".", editable = true }
+pydantic = ">=2.0.0"
+rich = ">=13.0.0"
+click = ">=8.0.0"
+
+# MCP server dependencies  
+mcp = ">=1.0.0"
+anyio = ">=4.0.0"
+
+# LLM provider dependencies
+anthropic = ">=0.25.0"
+openai = ">=1.12.0"
+
+# Async and performance
+asyncio-throttle = ">=1.0.0"
+aiofiles = ">=23.0.0"
+
+# Utilities
+pyyaml = ">=6.0.0"
+toml = ">=0.10.0"
+dataclasses-json = ">=0.6.0"
+
+[dependencies]
+# System dependencies that benefit from conda
+python = ">=3.10,<3.13"
+
+[feature.dev.pypi-dependencies]
+# Testing
+pytest = ">=7.0.0"
+pytest-asyncio = ">=0.21.0"
+pytest-cov = ">=4.0.0"
+pytest-mock = ">=3.10.0"
+
+# Code quality
+ruff = ">=0.1.0"
+mypy = ">=1.5.0"
+pre-commit = ">=3.0.0"
+
+# Development tools
+build = ">=0.10.0"
+twine = ">=4.0.0"
+
+[feature.pytest.pypi-dependencies]
+# Pytest-specific task dependencies
+pytest = ">=7.0.0"
+pytest-json-report = ">=1.5.0"
+pytest-html = ">=3.1.0"
+
+[feature.docgen.pypi-dependencies]
+# Docstring generation task dependencies
+ast-decompiler = ">=0.7.0"
+black = ">=23.0.0"
+libcst = ">=1.0.0"
+
+[feature.docs.pypi-dependencies]
+# Documentation dependencies
+mkdocs = ">=1.5.0"
+mkdocs-material = ">=9.0.0"
+mkdocs-mermaid2-plugin = ">=1.0.0"
+
+[feature.security.pypi-dependencies]
+# Security scanning tools
+bandit = { version = ">=1.7.0", extras = ["toml"] }
+safety = ">=2.0.0"
+pip-audit = ">=2.0.0"
+detect-secrets = ">=1.4.0"
+
+[environments]
+# Default development environment
+default = { features = ["dev"], solve-group = "default" }
+
+# Specialized environments
+test = { features = ["dev", "pytest"], solve-group = "default" }
+docs = { features = ["dev", "docs"], solve-group = "default" }
+security = { features = ["dev", "security"], solve-group = "default" }
+full = { features = ["dev", "pytest", "docgen", "docs", "security"], solve-group = "default" }
+
+# Production environment (minimal dependencies)
+prod = { solve-group = "prod" }
+
+[tasks]
+# Development tasks
+install = "python -m pip install -e ."
+clean = "rm -rf build/ dist/ *.egg-info/ .pytest_cache/ .coverage htmlcov/ .mypy_cache/ .ruff_cache/"
+
+# Testing tasks
+test = "pytest"
+test-cov = "pytest --cov=llm_task_framework --cov-report=html --cov-report=term --cov-report=xml"
+test-fast = "pytest -x -q"
+test-integration = "pytest -m integration"
+test-mcp = "pytest -m mcp"
+test-llm = "pytest -m llm"
+
+# Code quality tasks
+lint = "ruff check src tests"
+lint-fix = "ruff check --fix src tests"
+format = "ruff format src tests"
+format-check = "ruff format --check src tests"
+typecheck = "mypy src"
+
+# Combined quality checks
+check = { depends_on = ["lint", "typecheck", "test"] }
+check-fast = { depends_on = ["lint", "typecheck", "test-fast"] }
+
+# Security tasks
+security-scan = "bandit -r src/"
+security-deps = "safety check"
+security-audit = "pip-audit"
+security-secrets = "detect-secrets scan --all-files"
+security-all = { depends_on = ["security-scan", "security-deps", "security-audit", "security-secrets"] }
+
+# Documentation tasks
+docs-build = "mkdocs build"
+docs-serve = "mkdocs serve --dev-addr localhost:8000"
+docs-deploy = "mkdocs gh-deploy"
+
+# Build and release tasks
+build = "python -m build"
+build-wheel = "python -m build --wheel"
+build-sdist = "python -m build --sdist"
+upload-test = "twine upload --repository testpypi dist/*"
+upload = "twine upload dist/*"
+
+# Pre-commit tasks
+pre-commit-install = "pre-commit install"
+pre-commit-run = "pre-commit run --all-files"
+pre-commit-update = "pre-commit autoupdate"
+
+# Docker tasks
+docker-build = "docker build -t llm-task-framework ."
+docker-run = "docker run --rm -it llm-task-framework"
+
+# Project maintenance
+deps-update = "pixi update"
+deps-tree = "pixi tree"
+deps-list = "pixi list"
+
+# Development workflow shortcuts
+dev-setup = { depends_on = ["install", "pre-commit-install"] }
+ci-local = { depends_on = ["format-check", "lint", "typecheck", "test-cov", "security-all"] }
+
+[task-dependencies]
+# Ensure installation before running tests
+test = ["install"]
+test-cov = ["install"]
+test-integration = ["install"]
+test-mcp = ["install"]
+test-llm = ["install"]
+
+# Ensure build before upload
+upload = ["build"]
+upload-test = ["build"]
+
+[pypi-options]
+# Configure PyPI package installation
+index-url = "https://pypi.org/simple"
+extra-index-urls = ["https://test.pypi.org/simple"]
+
+[activation]
+scripts = ["scripts/activate.sh"]
+
+[system-requirements]
+# Specify system requirements for different platforms
+linux = "gcc"
+macos = "clang"
+windows = "msvc"

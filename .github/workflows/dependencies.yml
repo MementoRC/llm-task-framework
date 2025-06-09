@@ -20,38 +20,35 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
     
-    - name: Set up Python
-      uses: actions/setup-python@v4
+    - name: Set up Pixi
+      uses: prefix-dev/setup-pixi@v0.8.1
       with:
-        python-version: "3.11"
-    
-    - name: Install analysis tools
-      run: |
-        pip install hatch
-        hatch run pip install pip-audit safety pipdeptree
+        pixi-version: v0.34.0
+        cache: true
+        auth-host: conda.anaconda.org
     
     - name: Analyze dependency tree
       run: |
         echo "## Dependency Tree Analysis" >> dependency-report.md
         echo '```' >> dependency-report.md
-        hatch run pipdeptree >> dependency-report.md
+        pixi run deps-tree >> dependency-report.md
         echo '```' >> dependency-report.md
         echo "" >> dependency-report.md
     
     - name: Check for known vulnerabilities
       run: |
         echo "## Security Vulnerabilities" >> dependency-report.md
-        hatch run safety check --output text >> dependency-report.md || true
+        pixi run -e security security-deps >> dependency-report.md || true
         echo "" >> dependency-report.md
         
         echo "## Audit Results" >> dependency-report.md
-        hatch run pip-audit --format=text >> dependency-report.md || true
+        pixi run -e security security-audit >> dependency-report.md || true
     
     - name: Check for outdated packages
       run: |
         echo "## Outdated Packages" >> dependency-report.md
         echo '```' >> dependency-report.md
-        hatch run pip list --outdated >> dependency-report.md || true
+        pixi run deps-list >> dependency-report.md || true
         echo '```' >> dependency-report.md
     
     - name: Upload dependency report

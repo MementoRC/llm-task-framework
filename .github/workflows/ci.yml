@@ -28,25 +28,24 @@ jobs:
       with:
         fetch-depth: 0
     
-    - name: Set up Python
-      uses: actions/setup-python@v4
+    - name: Set up Pixi
+      uses: prefix-dev/setup-pixi@v0.8.1
       with:
-        python-version: "3.11"
-    
-    - name: Install Hatch
-      run: pip install hatch
+        pixi-version: v0.34.0
+        cache: true
+        auth-host: conda.anaconda.org
     
     - name: Check code formatting
-      run: hatch run lint
+      run: pixi run format-check
+    
+    - name: Run linting
+      run: pixi run lint
     
     - name: Run type checking
-      run: hatch run type-check
+      run: pixi run typecheck
     
-    - name: Check for security vulnerabilities
-      run: |
-        hatch run pip install bandit[toml] safety
-        hatch run bandit -r src/ -f json -o bandit-report.json || true
-        hatch run safety check --json --output safety-report.json || true
+    - name: Run security scans
+      run: pixi run -e security security-all
     
     - name: Upload security reports
       uses: actions/upload-artifact@v4
@@ -78,16 +77,15 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
     
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v4
+    - name: Set up Pixi
+      uses: prefix-dev/setup-pixi@v0.8.1
       with:
-        python-version: ${{ matrix.python-version }}
-    
-    - name: Install Hatch
-      run: pip install hatch
+        pixi-version: v0.34.0
+        cache: true
+        auth-host: conda.anaconda.org
     
     - name: Run tests with coverage
-      run: hatch run test-cov
+      run: pixi run test-cov
       env:
         # Disable LLM tests in CI unless API keys provided
         SKIP_LLM_TESTS: ${{ !secrets.ANTHROPIC_API_KEY && !secrets.OPENAI_API_KEY }}
@@ -113,22 +111,21 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
     
-    - name: Set up Python
-      uses: actions/setup-python@v4
+    - name: Set up Pixi
+      uses: prefix-dev/setup-pixi@v0.8.1
       with:
-        python-version: "3.11"
-    
-    - name: Install Hatch
-      run: pip install hatch
+        pixi-version: v0.34.0
+        cache: true
+        auth-host: conda.anaconda.org
     
     - name: Run integration tests
-      run: hatch run pytest -m integration --verbose
+      run: pixi run test-integration
       env:
         ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
     
     - name: Run MCP server tests
-      run: hatch run pytest -m mcp --verbose
+      run: pixi run test-mcp
 
   build-and-test-package:
     name: Build and Test Package
@@ -140,25 +137,24 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
     
-    - name: Set up Python
-      uses: actions/setup-python@v4
+    - name: Set up Pixi
+      uses: prefix-dev/setup-pixi@v0.8.1
       with:
-        python-version: "3.11"
-    
-    - name: Install build tools
-      run: pip install hatch build twine
+        pixi-version: v0.34.0
+        cache: true
+        auth-host: conda.anaconda.org
     
     - name: Build package
-      run: hatch build
+      run: pixi run build
     
     - name: Check package
-      run: twine check dist/*
+      run: pixi run -e dev sh -c "pip install twine && twine check dist/*"
     
     - name: Test package installation
       run: |
-        pip install dist/*.whl
-        python -c "import llm_task_framework; print('Package imported successfully')"
-        llm-task-framework --help
+        pixi run -e prod sh -c "pip install dist/*.whl"
+        pixi run -e prod python -c "import llm_task_framework; print('Package imported successfully')"
+        pixi run -e prod llm-task-framework --help
     
     - name: Upload build artifacts
       uses: actions/upload-artifact@v4
@@ -179,18 +175,18 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
     
-    - name: Set up Python
-      uses: actions/setup-python@v4
+    - name: Set up Pixi
+      uses: prefix-dev/setup-pixi@v0.8.1
       with:
-        python-version: "3.11"
+        pixi-version: v0.34.0
+        cache: true
+        auth-host: conda.anaconda.org
     
-    - name: Install Hatch and dependencies
-      run: |
-        pip install hatch
-        hatch run pip install pytest-benchmark
+    - name: Install benchmark dependencies
+      run: pixi run -e dev pip install pytest-benchmark
     
     - name: Run performance tests
-      run: hatch run pytest -m "not slow" --benchmark-only --benchmark-json=benchmark.json
+      run: pixi run -e dev pytest -m "not slow" --benchmark-only --benchmark-json=benchmark.json
     
     - name: Upload benchmark results
       uses: actions/upload-artifact@v4
@@ -210,16 +206,15 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
     
-    - name: Set up Python
-      uses: actions/setup-python@v4
+    - name: Set up Pixi
+      uses: prefix-dev/setup-pixi@v0.8.1
       with:
-        python-version: "3.11"
-    
-    - name: Install Hatch
-      run: pip install hatch
+        pixi-version: v0.34.0
+        cache: true
+        auth-host: conda.anaconda.org
     
     - name: Build documentation
-      run: hatch run docs:build
+      run: pixi run -e docs docs-build
     
     - name: Upload documentation
       uses: actions/upload-artifact@v4

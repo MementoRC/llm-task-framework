@@ -36,13 +36,12 @@ jobs:
       with:
         fetch-depth: 0
     
-    - name: Set up Python
-      uses: actions/setup-python@v4
+    - name: Set up Pixi
+      uses: prefix-dev/setup-pixi@v0.8.1
       with:
-        python-version: "3.11"
-    
-    - name: Install Hatch
-      run: pip install hatch
+        pixi-version: v0.34.0
+        cache: true
+        auth-host: conda.anaconda.org
     
     - name: Get version from tag or input
       id: get-version
@@ -72,13 +71,10 @@ jobs:
         fi
     
     - name: Run full test suite
-      run: hatch run check
+      run: pixi run check
     
     - name: Run security scans
-      run: |
-        hatch run pip install bandit[toml] safety
-        hatch run bandit -r src/ -ll
-        hatch run safety check
+      run: pixi run -e security security-all
 
   build-packages:
     name: Build Packages
@@ -90,13 +86,12 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
     
-    - name: Set up Python
-      uses: actions/setup-python@v4
+    - name: Set up Pixi
+      uses: prefix-dev/setup-pixi@v0.8.1
       with:
-        python-version: "3.11"
-    
-    - name: Install build tools
-      run: pip install hatch build twine
+        pixi-version: v0.34.0
+        cache: true
+        auth-host: conda.anaconda.org
     
     - name: Update version
       run: |
@@ -104,15 +99,15 @@ jobs:
         echo "__version__ = \"$VERSION\"" > src/llm_task_framework/__version__.py
     
     - name: Build packages
-      run: hatch build
+      run: pixi run build
     
     - name: Verify packages
       run: |
-        twine check dist/*
+        pixi run -e dev sh -c "pip install twine && twine check dist/*"
         # Test installation
-        pip install dist/*.whl
-        python -c "import llm_task_framework; print(f'Version: {llm_task_framework.__version__}')"
-        llm-task-framework --version
+        pixi run -e prod sh -c "pip install dist/*.whl"
+        pixi run -e prod python -c "import llm_task_framework; print(f'Version: {llm_task_framework.__version__}')"
+        pixi run -e prod llm-task-framework --version
     
     - name: Upload build artifacts
       uses: actions/upload-artifact@v4
