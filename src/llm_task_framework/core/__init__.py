@@ -2,7 +2,7 @@
 
 from .protocols import (
     TaskExtractor,
-    TaskAnalyzer, 
+    TaskAnalyzer,
     TaskSuggester,
     TaskApplier,
     TaskInput,
@@ -15,7 +15,7 @@ from .registry import TaskRegistry
 __all__ = [
     "TaskExtractor",
     "TaskAnalyzer",
-    "TaskSuggester", 
+    "TaskSuggester",
     "TaskApplier",
     "TaskInput",
     "TaskResult",

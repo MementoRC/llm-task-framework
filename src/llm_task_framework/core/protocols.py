@@ -13,11 +13,13 @@ from typing import Any, Dict, List, Optional, Protocol, runtime_checkable
 # Base data models
 class TaskInput(ABC):
     """Base class for task input data."""
+
     pass
 
 
 class TaskResult(ABC):
     """Base class for task results."""
+
     pass
 
 
@@ -26,7 +28,7 @@ class TaskResult(ABC):
 class TaskExtractor(Protocol):
     """
     Protocol for extracting and parsing input data for tasks.
-    
+
     Extractors are responsible for parsing various input formats
     (files, directories, URLs, etc.) and converting them into
     structured data that can be processed by analyzers.
@@ -52,7 +54,7 @@ class TaskExtractor(Protocol):
 class TaskAnalyzer(Protocol):
     """
     Protocol for analyzing extracted data.
-    
+
     Analyzers process the structured data from extractors to understand
     patterns, identify issues, or gather context needed for suggestion
     generation.
@@ -78,7 +80,7 @@ class TaskAnalyzer(Protocol):
 class TaskSuggester(Protocol):
     """
     Protocol for generating suggestions based on analysis results.
-    
+
     Suggesters use the analysis results to generate actionable
     suggestions, typically leveraging LLM capabilities for
     intelligent recommendations.
@@ -104,16 +106,16 @@ class TaskSuggester(Protocol):
 class TaskApplier(Protocol):
     """
     Protocol for applying suggestions to target resources.
-    
+
     Appliers take suggestions and apply them to files, databases,
     or other resources, typically with validation and rollback
     capabilities.
     """
 
     def apply(
-        self, 
-        suggestions: List[Dict[str, Any]], 
-        validation_tests: Optional[List[str]] = None
+        self,
+        suggestions: List[Dict[str, Any]],
+        validation_tests: Optional[List[str]] = None,
     ) -> Dict[str, Any]:
         """
         Apply suggestions to target resources.
@@ -136,15 +138,13 @@ class TaskApplier(Protocol):
 class TaskExecutor(Protocol):
     """
     Protocol for executing complete task workflows.
-    
+
     Executors coordinate the entire task pipeline: extraction,
     analysis, suggestion generation, and optional application.
     """
 
     def execute(
-        self, 
-        input_data: TaskInput,
-        context: Optional[Dict[str, Any]] = None
+        self, input_data: TaskInput, context: Optional[Dict[str, Any]] = None
     ) -> TaskResult:
         """
         Execute the complete task workflow.
@@ -166,7 +166,7 @@ class TaskExecutor(Protocol):
 class TaskValidator(Protocol):
     """
     Protocol for validating task inputs and results.
-    
+
     Validators ensure that inputs meet requirements and that
     results are properly formatted and valid.
     """
@@ -207,17 +207,17 @@ class TaskValidator(Protocol):
 class LLMService(Protocol):
     """
     Protocol for language model services.
-    
+
     LLM services provide the AI capabilities needed by suggesters
     and other components that require natural language processing.
     """
 
     def generate_completion(
-        self, 
+        self,
         prompt: str,
         max_tokens: Optional[int] = None,
         temperature: Optional[float] = None,
-        **kwargs: Any
+        **kwargs: Any,
     ) -> str:
         """
         Generate a completion from the language model.
@@ -241,7 +241,7 @@ class LLMService(Protocol):
         prompt: str,
         max_tokens: Optional[int] = None,
         temperature: Optional[float] = None,
-        **kwargs: Any
+        **kwargs: Any,
     ) -> str:
         """
         Generate a completion asynchronously.
@@ -326,11 +326,11 @@ class TaskMetadata:
         self.tags = tags or []
 
 
-@runtime_checkable  
+@runtime_checkable
 class TaskDefinition(Protocol):
     """
     Protocol for complete task definitions.
-    
+
     Task definitions bundle all the components needed for a task
     along with metadata and configuration.
     """
@@ -369,39 +369,47 @@ class TaskDefinition(Protocol):
 # Error types
 class TaskFrameworkError(Exception):
     """Base exception for task framework errors."""
+
     pass
 
 
 class ExtractionError(TaskFrameworkError):
     """Error during data extraction."""
+
     pass
 
 
 class AnalysisError(TaskFrameworkError):
     """Error during data analysis."""
+
     pass
 
 
 class SuggestionError(TaskFrameworkError):
     """Error during suggestion generation."""
+
     pass
 
 
 class ApplicationError(TaskFrameworkError):
     """Error during suggestion application."""
+
     pass
 
 
 class ValidationError(TaskFrameworkError):
     """Error during validation."""
+
     pass
 
 
 class TaskExecutionError(TaskFrameworkError):
     """Error during task execution."""
+
     pass
 
 
 class LLMServiceError(TaskFrameworkError):
     """Error in LLM service operations."""
+
     pass
