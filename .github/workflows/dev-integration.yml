@@ -34,13 +34,13 @@ jobs:
         cache: true
     
     - name: Quick formatting check
-      run: pixi run format-check
+      run: pixi run -e dev format-check
     
     - name: Quick linting
-      run: pixi run lint
+      run: pixi run -e dev lint
     
     - name: Fast tests
-      run: pixi run test-fast
+      run: pixi run -e dev pytest -x -q --no-cov
 
   # Comprehensive testing for development integration
   integration-tests:

@@ -116,13 +116,13 @@ jobs:
         cache: true
     
     - name: Run integration tests
-      run: pixi run -e dev test-integration
+      run: pixi run -e dev pytest -m integration --no-cov
       env:
         ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
     
     - name: Run MCP server tests
-      run: pixi run -e dev test-mcp
+      run: pixi run -e dev pytest -m mcp --no-cov
 
   build-and-test-package:
     name: Build and Test Package
@@ -181,7 +181,7 @@ jobs:
       run: pixi run -e dev pip install pytest-benchmark
     
     - name: Run performance tests
-      run: pixi run -e dev pytest -m "not slow" --benchmark-only --benchmark-json=benchmark.json
+      run: pixi run -e dev pytest -m "not slow" --benchmark-only --benchmark-json=benchmark.json --no-cov
     
     - name: Upload benchmark results
       uses: actions/upload-artifact@v4

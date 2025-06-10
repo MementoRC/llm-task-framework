@@ -35,16 +35,16 @@ jobs:
         cache: true
     
     - name: Check code formatting
-      run: pixi run format-check
+      run: pixi run -e dev format-check
     
     - name: Run linting
-      run: pixi run lint
+      run: pixi run -e dev lint
     
     - name: Run type checking
-      run: pixi run typecheck
+      run: pixi run -e dev typecheck
     
     - name: Run tests
-      run: pixi run test-cov
+      run: pixi run -e dev test-cov
     
     - name: Upload coverage
       uses: codecov/codecov-action@v3
