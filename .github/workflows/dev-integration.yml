@@ -121,7 +121,7 @@ jobs:
         cache: true
     
     - name: Build package
-      run: pixi run build
+      run: pixi run -e dev build
     
     - name: Test package installation
       run: |
