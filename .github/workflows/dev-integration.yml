@@ -126,7 +126,7 @@ jobs:
     - name: Test package installation
       run: |
         pixi run -e prod sh -c "pip install dist/*.whl"
-        pixi run -e prod python -c "import llm_task_framework; print('Package import successful')"
+        pixi run -e prod python -c "import llm_task_framework; print(\"Package import successful\")"
 
   # Development status summary
   dev-status:
