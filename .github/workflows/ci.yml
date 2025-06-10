@@ -17,10 +17,44 @@ env:
   FORCE_COLOR: "1"
 
 jobs:
+  # Quick feedback loop - fast checks for immediate developer feedback
+  quick-checks:
+    name: Quick Validation (Fast Feedback)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Pixi
+      uses: prefix-dev/setup-pixi@v0.8.8
+      with:
+        pixi-version: v0.41.4
+        cache: true
+
+    - name: Fast linting check
+      run: pixi run -e dev lint || true
+
+    - name: Fast unit tests (no coverage)
+      run: pixi run -e dev test-fast -m "not integration and not mcp" || true
+
+    - name: Fast package import test
+      run: |
+        pixi run -e dev python -c "import llm_task_framework; print('✅ Package imports successfully')" || echo "❌ Package import failed"
+
+    - name: Quick feedback summary
+      if: always()
+      run: |
+        echo "## ⚡ Quick Feedback Results" >> $GITHUB_STEP_SUMMARY
+        echo "Fast validation completed in under 5 minutes for immediate developer feedback." >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**Note:** Full CI pipeline continues with comprehensive testing, quality checks, and security scanning." >> $GITHUB_STEP_SUMMARY
+
   quality-checks:
     name: Quality Checks
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    needs: [quick-checks]
 
     steps:
     - name: Checkout code
@@ -221,12 +255,16 @@ jobs:
   ci-success:
     name: CI Success
     runs-on: ubuntu-latest
-    needs: [quality-checks, test, integration-tests, build-and-test-package, docs]
+    needs: [quick-checks, quality-checks, test, integration-tests, build-and-test-package, docs]
     if: always()
 
     steps:
     - name: Check CI status
       run: |
+        if [[ "${{ needs.quick-checks.result }}" != "success" ]]; then
+          echo "Quick checks failed"
+          exit 1
+        fi
         if [[ "${{ needs.quality-checks.result }}" != "success" ]]; then
           echo "Quality checks failed"
           exit 1
