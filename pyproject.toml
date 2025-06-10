@@ -257,9 +257,9 @@ check-fast = { depends-on = ["lint", "typecheck", "test-fast"] }
 
 # Security tasks
 security-scan = "bandit -r src/"
-security-deps = "python -c \"print('Security dependency scan placeholder - safety CLI requires auth in CI')\""
+security-deps = "python -c \"print('Security dependency scan placeholder - safety CLI requires auth in CI')\"" # pragma: allowlist secret
 security-audit = "pip-audit --skip-editable --ignore-vuln GHSA-9hjg-9r4m-mvj7"
-security-secrets = "detect-secrets scan --baseline .secrets.baseline src/"
+security-secrets = "detect-secrets scan --baseline .secrets.baseline src/" # pragma: allowlist secret
 security-all = { depends-on = ["security-scan", "security-deps", "security-audit", "security-secrets"] }
 
 # Documentation tasks

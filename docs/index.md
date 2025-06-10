@@ -9,7 +9,7 @@ from llm_task_framework import TaskConfig
 
 config = TaskConfig(
     llm_provider="anthropic",
-    api_key="your_key_here",
+    api_key="your_key_here",  # pragma: allowlist secret
     model="claude-3-sonnet-20240229",
 )
 ```

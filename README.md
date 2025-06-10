@@ -9,7 +9,7 @@ This framework provides a clean, extensible architecture for creating AI-powered
 ### Supported Task Types
 - **Test Analysis** (pytest failure analysis and fix suggestions)
 - **Documentation Generation** (automated docstring generation)
-- **Code Analysis** (static analysis and recommendations) 
+- **Code Analysis** (static analysis and recommendations)
 - **Content Generation** (markdown documentation, API docs)
 - **Custom Tasks** (easily extensible)
 
@@ -43,7 +43,7 @@ llm-task-framework --mcp-transport stdio --tasks pytest_analysis,docstring_gener
 
 # Available MCP tools automatically include:
 # - analyze_pytest_output
-# - apply_suggestion  
+# - apply_suggestion
 # - generate_docstrings
 # - apply_docstrings
 # - list_available_tasks
@@ -139,7 +139,7 @@ Add to your Claude Desktop MCP configuration:
 - `apply_suggestion` - Apply a suggested fix
 - `suggest_fixes` - Generate fix suggestions for failures
 
-#### Docstring Generation Tools  
+#### Docstring Generation Tools
 - `generate_docstrings` - Generate docstrings for Python code
 - `apply_docstrings` - Apply generated docstrings to files
 - `analyze_code_structure` - Analyze Python file structure
@@ -157,7 +157,7 @@ class MyTaskInput(TaskInput):
     source_path: str
     options: dict
 
-@dataclass  
+@dataclass
 class MyTaskResult(TaskResult):
     processed_data: dict
     suggestions: list
@@ -203,7 +203,7 @@ async def execute_my_task(source_path: str, options: dict) -> dict:
     input_data = MyTaskInput(source_path=source_path, options=options)
     return await framework.execute(input_data)
 
-@mcp_tool("my_task_validate")  
+@mcp_tool("my_task_validate")
 async def validate_my_task_input(source_path: str) -> dict:
     """Validate input for my task."""
     # Validation logic
@@ -218,7 +218,7 @@ from llm_task_framework.core.registry import TaskRegistry
 TaskRegistry.register("my_task", {
     "extractor": MyTaskExtractor,
     "analyzer": MyTaskAnalyzer,
-    "suggester": MyTaskSuggester, 
+    "suggester": MyTaskSuggester,
     "applier": MyTaskApplier,
     "mcp_endpoints": [execute_my_task, validate_my_task_input],
     "description": "My custom task implementation"
@@ -233,15 +233,15 @@ from llm_task_framework import TaskConfig
 config = TaskConfig(
     # LLM Configuration
     llm_provider="anthropic",  # or "openai", "custom"
-    api_key="your_key_here",
+    api_key="your_key_here",  # pragma: allowlist secret
     model="claude-3-sonnet-20240229",
     max_tokens=4000,
-    
+
     # MCP Configuration
     mcp_transport="stdio",  # or "http", "websocket"
     mcp_host="localhost",
     mcp_port=8000,
-    
+
     # Task Configuration
     enabled_tasks=["pytest_analysis", "docstring_generation"],
     task_settings={
