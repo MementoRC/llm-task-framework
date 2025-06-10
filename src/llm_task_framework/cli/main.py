@@ -22,7 +22,9 @@ def version() -> None:
 @main.command()
 @click.option("--host", default="localhost", help="Host to bind the MCP server to")
 @click.option("--port", default=8000, help="Port to bind the MCP server to")
-@click.option("--transport", default="stdio", help="Transport type (stdio, http, websocket)")
+@click.option(
+    "--transport", default="stdio", help="Transport type (stdio, http, websocket)"
+)
 def serve(host: str, port: int, transport: str) -> None:
     """Start the MCP server."""
     click.echo(f"Starting MCP server on {host}:{port} with {transport} transport...")
