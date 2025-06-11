@@ -19,14 +19,14 @@ import sys
 import time
 from pathlib import Path
 
-from memory_profiler import profile
+from memory_profiler import profile  # type: ignore[import-not-found]
 
 # Add src to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 
 @profile
-def test_framework_import():
+def test_framework_import() -> bool:
     """Test memory usage during framework import."""
     print("Testing framework import memory usage...")
 
@@ -34,7 +34,7 @@ def test_framework_import():
     gc.collect()
 
     # Import framework
-    import llm_task_framework
+    import llm_task_framework  # type: ignore[import-untyped]
 
     # Force garbage collection
     gc.collect()
@@ -44,7 +44,7 @@ def test_framework_import():
 
 
 @profile
-def test_cli_memory():
+def test_cli_memory() -> bool:
     """Test memory usage during CLI operations."""
     print("Testing CLI memory usage...")
 
@@ -71,7 +71,7 @@ def test_cli_memory():
 
 
 @profile
-def test_mcp_server_memory():
+def test_mcp_server_memory() -> bool:
     """Test memory usage during MCP server operations."""
     print("Testing MCP server memory usage...")
 
@@ -91,7 +91,7 @@ def test_mcp_server_memory():
 
 
 @profile
-def test_concurrent_operations_memory():
+def test_concurrent_operations_memory() -> bool:
     """Test memory usage during concurrent operations."""
     print("Testing concurrent operations memory usage...")
 
@@ -99,7 +99,7 @@ def test_concurrent_operations_memory():
 
     import concurrent.futures
 
-    def memory_intensive_task():
+    def memory_intensive_task() -> bool:
         """Simulate memory-intensive task."""
         # Create some data structures
         data = []
@@ -131,11 +131,11 @@ def test_concurrent_operations_memory():
 
 
 @profile
-def test_memory_leaks():
+def test_memory_leaks() -> bool:
     """Test for potential memory leaks."""
     print("Testing for memory leaks...")
 
-    import psutil
+    import psutil  # type: ignore[import-untyped]
 
     process = psutil.Process(os.getpid())
 
@@ -188,12 +188,17 @@ def test_memory_leaks():
         return True
 
 
-def main():
+def main() -> int:
     """Run all memory tests."""
     print("🧠 LLM Task Framework Memory Testing")
     print("=" * 50)
 
-    tests = [
+    from typing import TYPE_CHECKING
+
+    if TYPE_CHECKING:
+        from collections.abc import Callable
+
+    tests: list[tuple[str, "Callable[[], bool]"]] = [
         ("Framework Import", test_framework_import),
         ("CLI Operations", test_cli_memory),
         ("MCP Server", test_mcp_server_memory),
@@ -201,7 +206,7 @@ def main():
         ("Memory Leaks", test_memory_leaks),
     ]
 
-    results = []
+    results: list[tuple[str, bool]] = []
 
     for test_name, test_func in tests:
         print(f"\n🔍 Running {test_name} test...")

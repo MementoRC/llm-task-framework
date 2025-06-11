@@ -24,7 +24,8 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 class TestFrameworkBenchmarks:
     """Benchmark tests for core framework functionality."""
 
-    def test_framework_import_benchmark(self, benchmark):
+    @pytest.mark.benchmark
+    def test_framework_import_benchmark(self, benchmark) -> None:
         """Benchmark framework import performance."""
 
         def import_framework():
@@ -36,13 +37,14 @@ class TestFrameworkBenchmarks:
                 if module_name in sys.modules:
                     del sys.modules[module_name]
 
-            import llm_task_framework
+            import llm_task_framework  # type: ignore[import-untyped]
 
             return llm_task_framework
 
         result = benchmark(import_framework)
         assert result is not None
 
+    @pytest.mark.benchmark
     def test_protocol_creation_benchmark(self, benchmark):
         """Benchmark protocol object creation."""
 
@@ -59,6 +61,7 @@ class TestFrameworkBenchmarks:
         result = benchmark(create_protocol_objects)
         assert len(result) == 100
 
+    @pytest.mark.benchmark
     def test_config_validation_benchmark(self, benchmark):
         """Benchmark configuration validation performance."""
         import json
@@ -109,7 +112,8 @@ class TestFrameworkBenchmarks:
 class TestCLIBenchmarks:
     """Benchmark tests for CLI functionality."""
 
-    @patch("sys.argv")
+    @patch("sys.argv")  # type: ignore[misc]
+    @pytest.mark.benchmark
     def test_cli_argument_parsing_benchmark(self, mock_argv, benchmark):
         """Benchmark CLI argument parsing performance."""
 
@@ -142,6 +146,7 @@ class TestCLIBenchmarks:
         result = benchmark(parse_all_args)
         assert len(result) == len(test_args)
 
+    @pytest.mark.benchmark
     def test_cli_help_generation_benchmark(self, benchmark):
         """Benchmark CLI help text generation."""
 
@@ -177,6 +182,7 @@ class TestCLIBenchmarks:
 class TestMCPBenchmarks:
     """Benchmark tests for MCP server functionality."""
 
+    @pytest.mark.benchmark
     def test_mcp_message_processing_benchmark(self, benchmark):
         """Benchmark MCP message processing performance."""
 
@@ -214,6 +220,7 @@ class TestMCPBenchmarks:
         result = benchmark(process_mcp_messages)
         assert len(result) == 3
 
+    @pytest.mark.benchmark
     def test_mcp_server_initialization_benchmark(self, benchmark):
         """Benchmark MCP server initialization."""
 
@@ -243,6 +250,7 @@ class TestMCPBenchmarks:
 class TestConcurrencyBenchmarks:
     """Benchmark tests for concurrent operations."""
 
+    @pytest.mark.benchmark
     def test_concurrent_task_execution_benchmark(self, benchmark):
         """Benchmark concurrent task execution."""
         import concurrent.futures
@@ -271,6 +279,7 @@ class TestConcurrencyBenchmarks:
         result = benchmark(run_concurrent_tasks)
         assert len(result) == 10
 
+    @pytest.mark.benchmark
     def test_thread_pool_overhead_benchmark(self, benchmark):
         """Benchmark thread pool creation and teardown overhead."""
         import concurrent.futures
@@ -296,6 +305,7 @@ class TestConcurrencyBenchmarks:
 class TestDataProcessingBenchmarks:
     """Benchmark tests for data processing operations."""
 
+    @pytest.mark.benchmark
     def test_json_serialization_benchmark(self, benchmark):
         """Benchmark JSON serialization/deserialization."""
         import json
@@ -324,14 +334,20 @@ class TestDataProcessingBenchmarks:
             return len(parsed_data["tasks"])
 
         result = benchmark(json_operations)
-        assert result == 50
+        from typing import Any
 
+        result_typed: Any = result
+        assert result_typed == 50
+
+    @pytest.mark.benchmark
     def test_large_data_processing_benchmark(self, benchmark):
         """Benchmark processing of large data structures."""
 
         def process_large_dataset():
             # Create large dataset
-            dataset = []
+            from typing import Any, Dict, List
+
+            dataset: List[Dict[str, Any]] = []
             for i in range(10000):
                 record = {
                     "id": i,
@@ -351,7 +367,10 @@ class TestDataProcessingBenchmarks:
             return processed_count
 
         result = benchmark(process_large_dataset)
-        assert result > 0
+        from typing import Any
+
+        result_typed: Any = result
+        assert result_typed > 0
 
 
 # Performance thresholds and markers
@@ -360,6 +379,7 @@ class TestDataProcessingBenchmarks:
 class TestPerformanceThresholds:
     """Tests that verify performance stays within acceptable thresholds."""
 
+    @pytest.mark.benchmark
     def test_framework_import_under_threshold(self, benchmark):
         """Ensure framework import takes less than 1 second."""
 
@@ -369,11 +389,16 @@ class TestPerformanceThresholds:
             return llm_task_framework
 
         result = benchmark(import_framework)
+        # Properly cast the result to Any to avoid mypy issues
+        from typing import Any
+
+        result_typed: Any = result
 
         # Check that the benchmark time is under threshold
         # Note: benchmark.stats will contain timing information
-        assert result is not None
+        assert result_typed is not None
 
+    @pytest.mark.benchmark
     def test_config_validation_under_threshold(self, benchmark):
         """Ensure config validation takes less than 100ms."""
         import json
@@ -397,7 +422,10 @@ class TestPerformanceThresholds:
                 os.unlink(temp_path)
 
         result = benchmark(quick_config_validation)
-        assert result is True
+        from typing import Any
+
+        result_typed: Any = result
+        assert bool(result_typed) is True
 
 
 if __name__ == "__main__":

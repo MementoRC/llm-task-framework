@@ -30,14 +30,20 @@ import tempfile
 import time
 from typing import Any
 
-from locust import HttpUser, TaskSet, between, events, task  # type: ignore
-from locust.env import Environment  # type: ignore
+from locust import (  # type: ignore[import-not-found]
+    HttpUser,
+    TaskSet,
+    between,
+    events,
+    task,
+)
+from locust.env import Environment  # type: ignore[import-not-found]
 
 
 class FrameworkTaskSet(TaskSet):
     """Task set for testing core framework functionality."""
 
-    def on_start(self):
+    def on_start(self) -> None:
         """Initialize test environment."""
         self.temp_dir = tempfile.mkdtemp()
         self.config_file = os.path.join(self.temp_dir, "test_config.json")
@@ -56,7 +62,7 @@ class FrameworkTaskSet(TaskSet):
             json.dump(config, f)
 
     @task(3)
-    def test_cli_help(self):
+    def test_cli_help(self) -> None:
         """Test CLI help command performance."""
         start_time = time.time()
         try:
@@ -65,7 +71,7 @@ class FrameworkTaskSet(TaskSet):
                 capture_output=True,
                 text=True,
                 timeout=10,
-            )
+            )  # nosec B603 B607
 
             response_time = int((time.time() - start_time) * 1000)
 
@@ -108,7 +114,7 @@ class FrameworkTaskSet(TaskSet):
             )
 
     @task(2)
-    def test_framework_import(self):
+    def test_framework_import(self) -> None:
         """Test framework import performance."""
         start_time = time.time()
         try:
@@ -117,7 +123,7 @@ class FrameworkTaskSet(TaskSet):
                 capture_output=True,
                 text=True,
                 timeout=15,
-            )
+            )  # nosec B603 B607
 
             response_time = int((time.time() - start_time) * 1000)
 
@@ -151,7 +157,7 @@ class FrameworkTaskSet(TaskSet):
             )
 
     @task(1)
-    def test_config_validation(self):
+    def test_config_validation(self) -> None:
         """Test configuration validation performance."""
         start_time = time.time()
         try:
@@ -177,7 +183,7 @@ else:
 """
 
             result = subprocess.run(
-                ["python", "-c", validation_script],
+                ["python", "-c", validation_script],  # nosec B603 B607
                 capture_output=True,
                 text=True,
                 timeout=5,
@@ -218,14 +224,14 @@ else:
 class MCPServerTaskSet(TaskSet):
     """Task set for testing MCP server functionality."""
 
-    def on_start(self):
+    def on_start(self) -> None:
         """Setup MCP server testing."""
         self.mcp_host = os.getenv("MCP_SERVER_HOST", "localhost")
         self.mcp_port = int(os.getenv("MCP_SERVER_PORT", "8080"))
         self.base_url = f"http://{self.mcp_host}:{self.mcp_port}"
 
     @task(2)
-    def test_mcp_health_check(self):
+    def test_mcp_health_check(self) -> None:
         """Test MCP server health endpoint."""
         # This would test a health check endpoint if the MCP server exposes HTTP endpoints
         # For now, we simulate the check
@@ -254,7 +260,7 @@ class MCPServerTaskSet(TaskSet):
             )
 
     @task(1)
-    def test_mcp_protocol_simulation(self):
+    def test_mcp_protocol_simulation(self) -> None:
         """Test MCP protocol message handling simulation."""
         start_time = time.time()
         try:
@@ -281,7 +287,7 @@ print("MCP_PROTOCOL_OK")
 """
 
             result = subprocess.run(
-                ["python", "-c", mcp_test_script],
+                ["python", "-c", mcp_test_script],  # nosec B603 B607
                 capture_output=True,
                 text=True,
                 timeout=5,
@@ -323,7 +329,7 @@ class ConcurrentOperationsTaskSet(TaskSet):
     """Task set for testing concurrent operations."""
 
     @task(1)
-    def test_concurrent_imports(self):
+    def test_concurrent_imports(self) -> None:
         """Test concurrent framework imports."""
         start_time = time.time()
         try:
@@ -353,7 +359,7 @@ else:
 """
 
             result = subprocess.run(
-                ["python", "-c", concurrent_script],
+                ["python", "-c", concurrent_script],  # nosec B603 B607
                 capture_output=True,
                 text=True,
                 timeout=30,
@@ -407,7 +413,7 @@ class LLMTaskFrameworkUser(HttpUser):
     ]
 
     # Configure user behavior based on load profile
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
 
         profile = os.getenv("LOAD_TEST_PROFILE", "light").lower()
@@ -419,13 +425,13 @@ class LLMTaskFrameworkUser(HttpUser):
         else:  # light
             self.wait_time = between(2.0, 5.0)  # Light load
 
-    def on_start(self):
+    def on_start(self) -> None:
         """Called when a user starts."""
         print(
             f"Starting load test user (profile: {os.getenv('LOAD_TEST_PROFILE', 'light')})"
         )
 
-    def on_stop(self):
+    def on_stop(self) -> None:
         """Called when a user stops."""
         print("Stopping load test user")
 
@@ -433,9 +439,9 @@ class LLMTaskFrameworkUser(HttpUser):
 # Load test configuration based on environment
 def get_load_profile() -> dict[str, Any]:
     """Get load testing configuration based on profile."""
-    profile = os.getenv("LOAD_TEST_PROFILE", "light").lower()
+    profile: str = os.getenv("LOAD_TEST_PROFILE", "light").lower()
 
-    profiles = {
+    profiles: dict[str, dict[str, Any]] = {
         "light": {
             "users": 5,
             "spawn_rate": 1,
@@ -461,7 +467,7 @@ def get_load_profile() -> dict[str, Any]:
 
 # Event listeners for custom metrics
 @events.init.add_listener
-def on_locust_init(environment: Environment, **kwargs):  # noqa: ARG001
+def on_locust_init(environment: Environment, **kwargs: Any) -> None:  # noqa: ARG001
     """Initialize custom metrics and reporting."""
     print("🚀 LLM Task Framework Load Testing Started")
     print(f"Profile: {os.getenv('LOAD_TEST_PROFILE', 'light')}")
@@ -469,7 +475,7 @@ def on_locust_init(environment: Environment, **kwargs):  # noqa: ARG001
 
 
 @events.test_stop.add_listener
-def on_test_stop(environment: Environment, **kwargs):  # noqa: ARG001
+def on_test_stop(environment: Environment, **kwargs: Any) -> None:  # noqa: ARG001
     """Generate performance summary report."""
     print("\n" + "=" * 60)
     print("🏁 Load Testing Complete - Performance Summary")
