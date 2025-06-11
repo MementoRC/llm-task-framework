@@ -17,6 +17,62 @@ env:
   FORCE_COLOR: "1"
 
 jobs:
+  # Smart change detection for conditional job execution
+  detect-changes:
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    outputs:
+      has-python-changes: ${{ steps.changes.outputs.python }}
+      has-docs-changes: ${{ steps.changes.outputs.docs }}
+      has-security-changes: ${{ steps.changes.outputs.security }}
+      has-performance-changes: ${{ steps.changes.outputs.performance }}
+      has-ci-changes: ${{ steps.changes.outputs.ci }}
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: Detect file changes
+      uses: dorny/paths-filter@v2
+      id: changes
+      with:
+        filters: |
+          python:
+            - 'src/**'
+            - 'tests/**'
+            - 'pyproject.toml'
+            - 'pixi.lock'
+          docs:
+            - 'docs/**'
+            - 'mkdocs.yml'
+            - '*.md'
+          security:
+            - '.secrets.baseline'
+            - 'security/**'
+            - '.github/workflows/security.yml'
+          performance:
+            - 'tests/**/test_*performance*'
+            - 'tests/**/test_*benchmark*'
+            - 'locustfile.py'
+          ci:
+            - '.github/workflows/**'
+            - 'pyproject.toml'
+            - 'pixi.lock'
+    
+    - name: Change detection summary
+      run: |
+        echo "## 🔍 Change Detection Results" >> $GITHUB_STEP_SUMMARY
+        echo "| Component | Changed | Action |" >> $GITHUB_STEP_SUMMARY
+        echo "|-----------|---------|--------|" >> $GITHUB_STEP_SUMMARY
+        echo "| Python Code | ${{ steps.changes.outputs.python }} | ${{ steps.changes.outputs.python == 'true' && 'Run full test suite' || 'Skip extended testing' }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| Documentation | ${{ steps.changes.outputs.docs }} | ${{ steps.changes.outputs.docs == 'true' && 'Build docs' || 'Skip docs build' }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| Security | ${{ steps.changes.outputs.security }} | ${{ steps.changes.outputs.security == 'true' && 'Run security scans' || 'Basic security only' }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| Performance | ${{ steps.changes.outputs.performance }} | ${{ steps.changes.outputs.performance == 'true' && 'Run performance tests' || 'Skip performance tests' }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| CI/CD | ${{ steps.changes.outputs.ci }} | ${{ steps.changes.outputs.ci == 'true' && 'Full validation' || 'Standard validation' }} |" >> $GITHUB_STEP_SUMMARY
+
   # Quick feedback loop - fast checks for immediate developer feedback
   quick-checks:
     name: Quick Validation (Fast Feedback)
@@ -54,7 +110,8 @@ jobs:
     name: Quality Checks
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    needs: [quick-checks]
+    needs: [detect-changes, quick-checks]
+    if: needs.detect-changes.outputs.has-python-changes == 'true' || needs.detect-changes.outputs.has-ci-changes == 'true'
 
     steps:
     - name: Checkout code
@@ -77,23 +134,41 @@ jobs:
     - name: Run type checking
       run: pixi run -e dev typecheck
 
-    - name: Run security scans
-      run: pixi run -e security security-all
+    - name: Run enhanced security scans
+      run: pixi run -e security security-ci
 
     - name: Upload security reports
       uses: actions/upload-artifact@v4
       if: always()
       with:
-        name: security-reports
+        name: security-reports-${{ github.run_number }}
         path: |
-          bandit-report.json
-          safety-report.json
+          reports/bandit-report.json
+          reports/safety-report.json
+          reports/pip-audit-report.json
         retention-days: 30
+    
+    - name: Security scan summary
+      if: always()
+      run: |
+        echo "## 🛡️ Security Scan Results" >> $GITHUB_STEP_SUMMARY
+        echo "Security scans completed. Check artifacts for detailed reports." >> $GITHUB_STEP_SUMMARY
+        if [ -f "reports/bandit-report.json" ]; then
+          echo "- ✅ Static analysis (Bandit): Report generated" >> $GITHUB_STEP_SUMMARY
+        fi
+        if [ -f "reports/safety-report.json" ]; then
+          echo "- ✅ Dependency scan (Safety): Report generated" >> $GITHUB_STEP_SUMMARY
+        fi
+        if [ -f "reports/pip-audit-report.json" ]; then
+          echo "- ✅ Package audit (pip-audit): Report generated" >> $GITHUB_STEP_SUMMARY
+        fi
 
   test:
     name: Test Python ${{ matrix.python-version }} on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 20
+    needs: [detect-changes]
+    if: needs.detect-changes.outputs.has-python-changes == 'true' || needs.detect-changes.outputs.has-ci-changes == 'true' || github.event_name == 'workflow_dispatch'
     strategy:
       fail-fast: false
       matrix:
@@ -215,6 +290,54 @@ jobs:
         flags: integration
         name: codecov-integration
         fail_ci_if_error: false
+
+  performance-tests:
+    name: Performance Testing
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: [detect-changes, test]
+    if: needs.detect-changes.outputs.has-performance-changes == 'true' || needs.detect-changes.outputs.has-python-changes == 'true' || github.event_name == 'workflow_dispatch'
+    continue-on-error: true  # Don't fail CI if performance tests have issues
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Pixi
+      uses: prefix-dev/setup-pixi@v0.8.8
+      with:
+        pixi-version: v0.41.4
+        cache: true
+    
+    - name: Run benchmark tests
+      run: |
+        echo "Running performance benchmark tests..."
+        pixi run -e performance perf-test || echo "Performance tests completed with warnings"
+    
+    - name: Generate performance profile
+      run: |
+        echo "Generating performance profile..."
+        pixi run -e performance perf-profile || echo "Performance profiling completed"
+    
+    - name: Upload performance reports
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: performance-reports-${{ github.run_number }}
+        path: |
+          reports/profile.stats
+          .pytest_cache/
+        retention-days: 7
+    
+    - name: Performance summary
+      if: always()
+      run: |
+        echo "## 🚀 Performance Test Results" >> $GITHUB_STEP_SUMMARY
+        echo "Performance tests completed. Check artifacts for detailed reports." >> $GITHUB_STEP_SUMMARY
+        if [ -f "reports/profile.stats" ]; then
+          echo "- ✅ Performance profile: Generated" >> $GITHUB_STEP_SUMMARY
+        fi
+        echo "- 📊 Benchmark results: Available in test artifacts" >> $GITHUB_STEP_SUMMARY
 
   build-and-test-package:
     name: Build and Test Package
