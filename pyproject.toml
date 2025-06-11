@@ -270,7 +270,7 @@ security-secrets = "detect-secrets scan --baseline .secrets.baseline --all-files
 security-supply-chain = "python -c \"import pkg_resources; print('Supply chain verification: OK')\""
 security-comprehensive = { depends-on = ["security-static", "security-deps", "security-audit", "security-secrets", "security-supply-chain"] }
 security-all = { depends-on = ["security-comprehensive"] }
-security-ci = "mkdir -p reports && echo 'Starting security scans...' && { pixi run -e security security-comprehensive || echo 'Some security checks failed but continuing...'; }"
+security-ci = "mkdir -p reports && echo 'Starting security scans...' && pixi run -e security security-comprehensive"
 
 # Documentation tasks
 docs-build = "mkdocs build"
@@ -305,7 +305,7 @@ perf-memory = "python -m memory_profiler scripts/memory_test.py"
 perf-profile = "python -m cProfile -o reports/profile.stats -m pytest tests/"
 perf-all = { depends-on = ["perf-test"] }
 
-# Development workflow shortcuts  
+# Development workflow shortcuts
 dev-setup = { depends-on = ["install", "pre-commit-install"] }
 ci-local = { depends-on = ["format-check", "lint", "typecheck", "test-cov", "security-all"] }
 ci-comprehensive = { depends-on = ["ci-local", "perf-all"] }
