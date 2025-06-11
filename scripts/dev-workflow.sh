@@ -41,16 +41,16 @@ create_feature() {
         echo "Usage: $0 feature <feature-name>"
         exit 1
     fi
-    
+
     print_status "Creating feature branch: feature/$feature_name"
-    
+
     # Ensure we're on development branch and up to date
     git checkout development
     git pull origin development
-    
+
     # Create and checkout feature branch
     git checkout -b "feature/$feature_name"
-    
+
     print_success "Created and switched to feature/$feature_name"
     print_status "You can now start developing your feature!"
     print_status "When ready, push with: git push -u origin feature/$feature_name"
@@ -64,16 +64,16 @@ create_hotfix() {
         echo "Usage: $0 hotfix <hotfix-name>"
         exit 1
     fi
-    
+
     print_status "Creating hotfix branch: hotfix/$hotfix_name"
-    
+
     # Ensure we're on main branch and up to date
     git checkout main || git checkout master
     git pull origin $(git branch --show-current)
-    
+
     # Create and checkout hotfix branch
     git checkout -b "hotfix/$hotfix_name"
-    
+
     print_success "Created and switched to hotfix/$hotfix_name"
     print_warning "Remember: hotfix branches should be merged to BOTH main and development"
 }
@@ -81,27 +81,27 @@ create_hotfix() {
 # Function to finish a feature (merge to development)
 finish_feature() {
     local current_branch=$(git branch --show-current)
-    
+
     if [[ ! "$current_branch" =~ ^feature/ ]]; then
         print_error "Not on a feature branch"
         exit 1
     fi
-    
+
     print_status "Finishing feature branch: $current_branch"
-    
+
     # Run local checks first
     print_status "Running pre-merge checks..."
     pixi run check || {
         print_error "Quality checks failed. Please fix issues before merging."
         exit 1
     }
-    
+
     # Push feature branch if not already pushed
     if ! git ls-remote --exit-code --heads origin "$current_branch" > /dev/null 2>&1; then
         print_status "Pushing feature branch to remote..."
         git push -u origin "$current_branch"
     fi
-    
+
     print_success "Feature branch is ready!"
     print_status "Next steps:"
     echo "  1. Create a PR: gh pr create --base development --title 'Your PR Title'"
@@ -111,52 +111,52 @@ finish_feature() {
 # Function to sync development branch
 sync_dev() {
     print_status "Syncing development branch with remote..."
-    
+
     local current_branch=$(git branch --show-current)
     git checkout development
     git pull origin development
-    
+
     if [ "$current_branch" != "development" ]; then
         git checkout "$current_branch"
         print_status "Rebasing current branch on updated development..."
         git rebase development
     fi
-    
+
     print_success "Development branch synced!"
 }
 
 # Function to run quality checks
 check() {
     print_status "Running comprehensive quality checks..."
-    
+
     echo "🔍 Formatting check..."
     pixi run format-check
-    
+
     echo "🔍 Linting..."
     pixi run lint
-    
+
     echo "🔍 Type checking..."
     pixi run typecheck
-    
+
     echo "🧪 Running tests..."
     pixi run test-cov
-    
+
     echo "🔒 Security checks..."
     pixi run -e security security-all || print_warning "Some security checks failed"
-    
+
     print_success "All quality checks completed!"
 }
 
 # Function to fix common issues
 fix() {
     print_status "Fixing common code issues..."
-    
+
     echo "🔧 Formatting code..."
     pixi run format
-    
+
     echo "🔧 Fixing linting issues..."
     pixi run lint-fix
-    
+
     print_success "Code fixes applied!"
     print_status "Run 'pixi run check' to verify all issues are resolved"
 }

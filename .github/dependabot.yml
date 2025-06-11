@@ -5,7 +5,7 @@ updates:
   - package-ecosystem: "pip"
     directory: "/"
     schedule:
-      interval: "weekly" 
+      interval: "weekly"
       day: "monday"
       time: "04:00"
     target-branch: "development"
@@ -34,7 +34,7 @@ updates:
           - "bandit*"
           - "safety*"
           - "codecov*"
-      
+
       # Group development and testing dependencies
       development-dependencies:
         patterns:

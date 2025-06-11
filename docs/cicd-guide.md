@@ -17,13 +17,13 @@ graph TB
     E --> F[Security Scans]
     F --> G[Documentation]
     G --> H[CI Success Gate]
-    
+
     I[Tag Push] --> J[Release Validation]
     J --> K[Cross-Platform Testing]
     K --> L[GitHub Release]
     L --> M[PyPI Publish]
     M --> N[Docker Publish]
-    
+
     O[Schedule] --> P[Security Scans]
     O --> Q[Dependency Health]
 ```

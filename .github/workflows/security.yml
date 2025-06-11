@@ -137,7 +137,7 @@ jobs:
         echo "Scanning for new secrets..."
         detect-secrets scan --baseline .secrets.baseline --all-files \
           --exclude-files '.*\.lock$|.*\.pyc$|.*__pycache__.*|.*\.git.*|htmlcov/.*|\.coverage|.*\.egg-info.*|build/.*|dist/.*|\.pytest_cache/.*|\.mypy_cache/.*|\.ruff_cache/.*|site/.*'
-        
+
         if [ $? -ne 0 ]; then
           echo "::error::New secrets detected! Please review and update .secrets.baseline if legitimate."
           echo "To update baseline: detect-secrets scan --update .secrets.baseline"
@@ -241,7 +241,7 @@ jobs:
         echo "| ⚖️ License Check | ${{ needs.license-check.result }} | License compliance verification |" >> $GITHUB_STEP_SUMMARY
         echo "| 🛡️ Supply Chain | ${{ needs.supply-chain-security.result }} | Package integrity verification |" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
-        
+
         # Determine overall security status
         if [[ "${{ needs.codeql-analysis.result }}" == "failure" || "${{ needs.dependency-scan.result }}" == "failure" || "${{ needs.secret-detection.result }}" == "failure" || "${{ needs.license-check.result }}" == "failure" || "${{ needs.supply-chain-security.result }}" == "failure" ]]; then
           echo "**🚨 Security Status: ATTENTION REQUIRED**" >> $GITHUB_STEP_SUMMARY
@@ -252,7 +252,7 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "All security scans completed successfully with no critical findings." >> $GITHUB_STEP_SUMMARY
         fi
-        
+
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "📊 **Scan Details:**" >> $GITHUB_STEP_SUMMARY
         echo "- **CodeQL**: Comprehensive static analysis with security-and-quality queries" >> $GITHUB_STEP_SUMMARY

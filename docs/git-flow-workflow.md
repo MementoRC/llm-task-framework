@@ -153,7 +153,7 @@ gh pr create --base development --title "hotfix: critical security patch (sync)"
 # Create feature branch
 ./scripts/dev-workflow.sh feature <name>
 
-# Create hotfix branch  
+# Create hotfix branch
 ./scripts/dev-workflow.sh hotfix <name>
 
 # Finish feature (prepare for PR)
@@ -231,7 +231,7 @@ pixi run test-integration # Integration tests (< 10 min)
 
 **Test Categories:**
 - **Unit tests**: Fast, isolated component testing
-- **Integration tests**: Component interaction testing  
+- **Integration tests**: Component interaction testing
 - **MCP tests**: MCP server functionality
 - **LLM tests**: AI provider integration (requires API keys)
 
@@ -314,7 +314,7 @@ The workflow automatically:
 
 ### 📊 **CI/CD Metrics**
 - Build success rates
-- Test execution times  
+- Test execution times
 - Security scan results
 - Deployment frequency
 
