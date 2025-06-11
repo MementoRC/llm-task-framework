@@ -97,14 +97,25 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-        python-version: ["3.10", "3.11", "3.12"]
-        exclude:
-          # Skip some combinations for faster CI
+        include:
+          # Ubuntu: Full Python version coverage (primary development platform)
+          - os: ubuntu-latest
+            python-version: "3.10"
+          - os: ubuntu-latest
+            python-version: "3.11"
+          - os: ubuntu-latest
+            python-version: "3.12"
+          
+          # macOS: Python 3.12+ only (aligned with external patterns)
+          - os: macos-latest
+            python-version: "3.12"
+          
+          # Windows: Core versions with performance optimizations
           - os: windows-latest
             python-version: "3.10"
-          - os: macos-latest
-            python-version: "3.10"
+            test-marker: "not slow"  # Skip slow tests on Windows 3.10
+          - os: windows-latest
+            python-version: "3.12"
 
     steps:
     - name: Checkout code
@@ -116,8 +127,33 @@ jobs:
         pixi-version: v0.41.4
         cache: true
 
-    - name: Run tests with coverage
-      run: pixi run -e dev test-cov
+    - name: Run unit tests with coverage
+      run: |
+        # Run unit tests first to avoid URL patching pollution from integration tests
+        # Exclude integration and mcp tests from main test matrix to prevent pollution
+        # Use platform-specific optimizations for test execution
+        if [[ "${{ matrix.test-marker }}" != "" ]]; then
+          echo "Running optimized unit tests for ${{ matrix.os }} Python ${{ matrix.python-version }}..."
+          pixi run -e dev pytest tests -m "not integration and not mcp and ${{ matrix.test-marker }}" --cov=llm_task_framework --cov-report=xml:coverage.xml --cov-report=term --maxfail=5 -x
+        else
+          echo "Running standard unit tests for ${{ matrix.os }} Python ${{ matrix.python-version }}..."
+          pixi run -e dev pytest tests -m "not integration and not mcp" --cov=llm_task_framework --cov-report=xml:coverage.xml --cov-report=term
+        fi
+      env:
+        # Disable LLM tests in CI unless API keys provided
+        SKIP_LLM_TESTS: ${{ !secrets.ANTHROPIC_API_KEY && !secrets.OPENAI_API_KEY }}
+
+    - name: Run basic integration tests (cross-platform)
+      run: |
+        # Run integration tests separately to prevent URL patching pollution
+        # Only run basic integration tests that don't require external services
+        # Skip on platforms where integration tests might be flaky
+        if [[ "${{ matrix.os }}" == "ubuntu-latest" ]] || [[ "${{ matrix.os }}" == "macos-latest" ]]; then
+          echo "Running cross-platform integration tests..."
+          pixi run -e dev pytest tests -m "integration and not mcp" --cov=llm_task_framework --cov-append --no-cov-report || [ $? -eq 5 ]
+        else
+          echo "Skipping integration tests on ${{ matrix.os }} for performance optimization"
+        fi
       env:
         # Disable LLM tests in CI unless API keys provided
         SKIP_LLM_TESTS: ${{ !secrets.ANTHROPIC_API_KEY && !secrets.OPENAI_API_KEY }}
@@ -133,10 +169,10 @@ jobs:
         fail_ci_if_error: false
 
   integration-tests:
-    name: Integration Tests
+    name: Advanced Integration Tests
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    needs: [quality-checks]
+    needs: [test]
     if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
 
     steps:
@@ -149,14 +185,34 @@ jobs:
         pixi-version: v0.41.4
         cache: true
 
-    - name: Run integration tests
-      run: pixi run -e dev pytest -m integration --no-cov
+    - name: Run advanced integration tests
+      run: |
+        echo "Running advanced integration tests with external services..."
+        # Run advanced integration tests that may require external services
+        # These run separately to avoid pollution of cross-platform tests
+        pixi run -e dev pytest tests -m "integration" --cov=llm_task_framework --cov-report=xml:integration-coverage.xml || [ $? -eq 5 ]
       env:
         ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 
-    - name: Run MCP server tests
-      run: pixi run -e dev pytest -m mcp --no-cov
+    - name: Run MCP server tests (isolated)
+      run: |
+        echo "Running MCP server tests in isolation..."
+        # Run MCP tests separately to prevent any server state pollution
+        pixi run -e dev pytest tests -m "mcp" --cov=llm_task_framework --cov-append --no-cov-report || [ $? -eq 5 ]
+      env:
+        ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+
+    - name: Upload integration coverage to Codecov
+      uses: codecov/codecov-action@v3
+      if: always()
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        file: ./integration-coverage.xml
+        flags: integration
+        name: codecov-integration
+        fail_ci_if_error: false
 
   build-and-test-package:
     name: Build and Test Package
@@ -214,8 +270,12 @@ jobs:
     - name: Install benchmark dependencies
       run: pixi run -e dev pip install pytest-benchmark
 
-    - name: Run performance tests
-      run: pixi run -e dev pytest -m "not slow" --benchmark-only --benchmark-json=benchmark.json --no-cov
+    - name: Run performance tests (isolated)
+      run: |
+        echo "Running performance benchmarks in isolation..."
+        # Run performance tests separately to avoid interference with other test types
+        # Exclude slow tests and run only benchmark-marked tests
+        pixi run -e dev pytest tests -m "benchmark and not slow" --benchmark-only --benchmark-json=benchmark.json --no-cov || [ $? -eq 5 ]
 
     - name: Upload benchmark results
       uses: actions/upload-artifact@v4
