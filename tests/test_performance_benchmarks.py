@@ -124,7 +124,9 @@ class TestCLIBenchmarks:
         def parse_all_args():
             results = []
             for args in test_args:
-                mock_argv.__getitem__.side_effect = lambda i, test_args_item=args: test_args_item[i]
+                mock_argv.__getitem__.side_effect = (
+                    lambda i, test_args_item=args: test_args_item[i]
+                )
                 mock_argv.__len__.return_value = len(args)
 
                 # Simulate argument parsing without actual execution
