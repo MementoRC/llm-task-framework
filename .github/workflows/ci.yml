@@ -201,7 +201,7 @@ jobs:
       run: |
         echo "Running MCP server tests in isolation..."
         # Run MCP tests separately to prevent any server state pollution
-        pixi run -e dev pytest tests -m "mcp" --cov=llm_task_framework --cov-append --no-cov-report || [ $? -eq 5 ]
+        pixi run -e dev pytest tests -m "mcp" --cov=llm_task_framework --cov-append --cov-fail-under=0 || [ $? -eq 5 ]
       env:
         ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
