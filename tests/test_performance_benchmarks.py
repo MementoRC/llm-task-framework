@@ -345,9 +345,9 @@ class TestDataProcessingBenchmarks:
 
         def process_large_dataset():
             # Create large dataset
-            from typing import Any, Dict, List
+            from typing import Any
 
-            dataset: List[Dict[str, Any]] = []
+            dataset: list[dict[str, Any]] = []
             for i in range(10000):
                 record = {
                     "id": i,
