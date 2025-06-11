@@ -356,6 +356,7 @@ pytest-xdist = ">=3.0.0"
 memory-profiler = ">=0.60.0"
 
 # Python version features
+
 [tool.pixi.feature.py310.dependencies]
 python = "3.10.*"
 
