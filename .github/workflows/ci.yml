@@ -128,6 +128,7 @@ jobs:
         cache: true
 
     - name: Run unit tests with coverage
+      shell: bash
       run: |
         # Run unit tests first to avoid URL patching pollution from integration tests
         # Exclude integration and mcp tests from main test matrix to prevent pollution
@@ -144,13 +145,14 @@ jobs:
         SKIP_LLM_TESTS: ${{ !secrets.ANTHROPIC_API_KEY && !secrets.OPENAI_API_KEY }}
 
     - name: Run basic integration tests (cross-platform)
+      shell: bash
       run: |
         # Run integration tests separately to prevent URL patching pollution
         # Only run basic integration tests that don't require external services
         # Skip on platforms where integration tests might be flaky
         if [[ "${{ matrix.os }}" == "ubuntu-latest" ]] || [[ "${{ matrix.os }}" == "macos-latest" ]]; then
           echo "Running cross-platform integration tests..."
-          pixi run -e dev pytest tests -m "integration and not mcp" --cov=llm_task_framework --cov-append --no-cov-report || [ $? -eq 5 ]
+          pixi run -e dev pytest tests -m "integration and not mcp" --cov=llm_task_framework --cov-append || [ $? -eq 5 ]
         else
           echo "Skipping integration tests on ${{ matrix.os }} for performance optimization"
         fi
