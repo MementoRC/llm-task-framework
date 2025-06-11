@@ -1,10 +1,9 @@
-# -*- coding: utf-8 -*-
 """
 Locust load testing configuration for LLM Task Framework.
 
 This file provides comprehensive load testing for:
 1. MCP server endpoints
-2. CLI functionality 
+2. CLI functionality
 3. Core framework functionality
 4. Concurrent operations
 
@@ -29,36 +28,33 @@ import os
 import subprocess
 import tempfile
 import time
-from typing import Any, Dict
+from typing import Any
 
-from locust import HttpUser, TaskSet, between, events, task
-from locust.env import Environment
+from locust import HttpUser, TaskSet, between, events, task  # type: ignore
+from locust.env import Environment  # type: ignore
 
 
 class FrameworkTaskSet(TaskSet):
     """Task set for testing core framework functionality."""
-    
+
     def on_start(self):
         """Initialize test environment."""
         self.temp_dir = tempfile.mkdtemp()
         self.config_file = os.path.join(self.temp_dir, "test_config.json")
-        
+
         # Create test configuration
         config = {
             "framework": {
                 "name": "test-framework",
                 "version": "1.0.0",
-                "max_workers": 4
+                "max_workers": 4,
             },
-            "llm": {
-                "provider": "mock",
-                "model": "test-model"
-            }
+            "llm": {"provider": "mock", "model": "test-model"},
         }
-        
-        with open(self.config_file, 'w') as f:
+
+        with open(self.config_file, "w") as f:
             json.dump(config, f)
-    
+
     @task(3)
     def test_cli_help(self):
         """Test CLI help command performance."""
@@ -68,11 +64,11 @@ class FrameworkTaskSet(TaskSet):
                 ["python", "-m", "llm_task_framework.cli.main", "--help"],
                 capture_output=True,
                 text=True,
-                timeout=10
+                timeout=10,
             )
-            
+
             response_time = int((time.time() - start_time) * 1000)
-            
+
             if result.returncode == 0:
                 events.request.fire(
                     request_type="CLI",
@@ -80,7 +76,7 @@ class FrameworkTaskSet(TaskSet):
                     response_time=response_time,
                     response_length=len(result.stdout),
                     exception=None,
-                    context={}
+                    context={},
                 )
             else:
                 events.request.fire(
@@ -89,9 +85,9 @@ class FrameworkTaskSet(TaskSet):
                     response_time=response_time,
                     response_length=0,
                     exception=Exception(f"CLI error: {result.stderr}"),
-                    context={}
+                    context={},
                 )
-                
+
         except subprocess.TimeoutExpired:
             events.request.fire(
                 request_type="CLI",
@@ -99,7 +95,7 @@ class FrameworkTaskSet(TaskSet):
                 response_time=10000,
                 response_length=0,
                 exception=Exception("CLI timeout"),
-                context={}
+                context={},
             )
         except Exception as e:
             events.request.fire(
@@ -108,9 +104,9 @@ class FrameworkTaskSet(TaskSet):
                 response_time=int((time.time() - start_time) * 1000),
                 response_length=0,
                 exception=e,
-                context={}
+                context={},
             )
-    
+
     @task(2)
     def test_framework_import(self):
         """Test framework import performance."""
@@ -120,11 +116,11 @@ class FrameworkTaskSet(TaskSet):
                 ["python", "-c", "import llm_task_framework; print('OK')"],
                 capture_output=True,
                 text=True,
-                timeout=15
+                timeout=15,
             )
-            
+
             response_time = int((time.time() - start_time) * 1000)
-            
+
             if result.returncode == 0 and "OK" in result.stdout:
                 events.request.fire(
                     request_type="Framework",
@@ -132,7 +128,7 @@ class FrameworkTaskSet(TaskSet):
                     response_time=response_time,
                     response_length=len(result.stdout),
                     exception=None,
-                    context={}
+                    context={},
                 )
             else:
                 events.request.fire(
@@ -141,9 +137,9 @@ class FrameworkTaskSet(TaskSet):
                     response_time=response_time,
                     response_length=0,
                     exception=Exception(f"Import failed: {result.stderr}"),
-                    context={}
+                    context={},
                 )
-                
+
         except Exception as e:
             events.request.fire(
                 request_type="Framework",
@@ -151,9 +147,9 @@ class FrameworkTaskSet(TaskSet):
                 response_time=int((time.time() - start_time) * 1000),
                 response_length=0,
                 exception=e,
-                context={}
+                context={},
             )
-    
+
     @task(1)
     def test_config_validation(self):
         """Test configuration validation performance."""
@@ -169,7 +165,7 @@ config_path = Path('{self.config_file}')
 if config_path.exists():
     with open(config_path) as f:
         config = json.load(f)
-    
+
     # Basic validation
     required_keys = ['framework', 'llm']
     if all(key in config for key in required_keys):
@@ -179,16 +175,16 @@ if config_path.exists():
 else:
     print('CONFIG_MISSING')
 """
-            
+
             result = subprocess.run(
                 ["python", "-c", validation_script],
                 capture_output=True,
                 text=True,
-                timeout=5
+                timeout=5,
             )
-            
+
             response_time = int((time.time() - start_time) * 1000)
-            
+
             if result.returncode == 0 and "CONFIG_VALID" in result.stdout:
                 events.request.fire(
                     request_type="Config",
@@ -196,7 +192,7 @@ else:
                     response_time=response_time,
                     response_length=len(result.stdout),
                     exception=None,
-                    context={}
+                    context={},
                 )
             else:
                 events.request.fire(
@@ -205,9 +201,9 @@ else:
                     response_time=response_time,
                     response_length=0,
                     exception=Exception(f"Config validation failed: {result.stderr}"),
-                    context={}
+                    context={},
                 )
-                
+
         except Exception as e:
             events.request.fire(
                 request_type="Config",
@@ -215,19 +211,19 @@ else:
                 response_time=int((time.time() - start_time) * 1000),
                 response_length=0,
                 exception=e,
-                context={}
+                context={},
             )
 
 
 class MCPServerTaskSet(TaskSet):
     """Task set for testing MCP server functionality."""
-    
+
     def on_start(self):
         """Setup MCP server testing."""
         self.mcp_host = os.getenv("MCP_SERVER_HOST", "localhost")
         self.mcp_port = int(os.getenv("MCP_SERVER_PORT", "8080"))
         self.base_url = f"http://{self.mcp_host}:{self.mcp_port}"
-    
+
     @task(2)
     def test_mcp_health_check(self):
         """Test MCP server health endpoint."""
@@ -237,7 +233,7 @@ class MCPServerTaskSet(TaskSet):
         try:
             # Simulate health check
             time.sleep(0.1)  # Simulate network latency
-            
+
             response_time = int((time.time() - start_time) * 1000)
             events.request.fire(
                 request_type="MCP",
@@ -245,7 +241,7 @@ class MCPServerTaskSet(TaskSet):
                 response_time=response_time,
                 response_length=50,
                 exception=None,
-                context={}
+                context={},
             )
         except Exception as e:
             events.request.fire(
@@ -254,9 +250,9 @@ class MCPServerTaskSet(TaskSet):
                 response_time=int((time.time() - start_time) * 1000),
                 response_length=0,
                 exception=e,
-                context={}
+                context={},
             )
-    
+
     @task(1)
     def test_mcp_protocol_simulation(self):
         """Test MCP protocol message handling simulation."""
@@ -283,16 +279,16 @@ message = {
 time.sleep(0.05)
 print("MCP_PROTOCOL_OK")
 """
-            
+
             result = subprocess.run(
                 ["python", "-c", mcp_test_script],
                 capture_output=True,
                 text=True,
-                timeout=5
+                timeout=5,
             )
-            
+
             response_time = int((time.time() - start_time) * 1000)
-            
+
             if result.returncode == 0 and "MCP_PROTOCOL_OK" in result.stdout:
                 events.request.fire(
                     request_type="MCP",
@@ -300,7 +296,7 @@ print("MCP_PROTOCOL_OK")
                     response_time=response_time,
                     response_length=len(result.stdout),
                     exception=None,
-                    context={}
+                    context={},
                 )
             else:
                 events.request.fire(
@@ -309,9 +305,9 @@ print("MCP_PROTOCOL_OK")
                     response_time=response_time,
                     response_length=0,
                     exception=Exception(f"MCP protocol test failed: {result.stderr}"),
-                    context={}
+                    context={},
                 )
-                
+
         except Exception as e:
             events.request.fire(
                 request_type="MCP",
@@ -319,13 +315,13 @@ print("MCP_PROTOCOL_OK")
                 response_time=int((time.time() - start_time) * 1000),
                 response_length=0,
                 exception=e,
-                context={}
+                context={},
             )
 
 
 class ConcurrentOperationsTaskSet(TaskSet):
     """Task set for testing concurrent operations."""
-    
+
     @task(1)
     def test_concurrent_imports(self):
         """Test concurrent framework imports."""
@@ -355,16 +351,16 @@ if all(results):
 else:
     print("CONCURRENT_FAILED")
 """
-            
+
             result = subprocess.run(
                 ["python", "-c", concurrent_script],
                 capture_output=True,
                 text=True,
-                timeout=30
+                timeout=30,
             )
-            
+
             response_time = int((time.time() - start_time) * 1000)
-            
+
             if result.returncode == 0 and "CONCURRENT_OK" in result.stdout:
                 events.request.fire(
                     request_type="Concurrent",
@@ -372,7 +368,7 @@ else:
                     response_time=response_time,
                     response_length=len(result.stdout),
                     exception=None,
-                    context={}
+                    context={},
                 )
             else:
                 events.request.fire(
@@ -381,9 +377,9 @@ else:
                     response_time=response_time,
                     response_length=0,
                     exception=Exception(f"Concurrent test failed: {result.stderr}"),
-                    context={}
+                    context={},
                 )
-                
+
         except Exception as e:
             events.request.fire(
                 request_type="Concurrent",
@@ -391,79 +387,81 @@ else:
                 response_time=int((time.time() - start_time) * 1000),
                 response_length=0,
                 exception=e,
-                context={}
+                context={},
             )
 
 
 class LLMTaskFrameworkUser(HttpUser):
     """
     Load test user for LLM Task Framework.
-    
+
     Simulates realistic usage patterns including CLI operations,
     framework initialization, and MCP server interactions.
     """
-    
+
     # Task sets to execute (weighted distribution)
     tasks = [
-        (FrameworkTaskSet, 5),      # 50% - Core framework operations
-        (MCPServerTaskSet, 3),      # 30% - MCP server operations  
-        (ConcurrentOperationsTaskSet, 2)  # 20% - Concurrent operations
+        (FrameworkTaskSet, 5),  # 50% - Core framework operations
+        (MCPServerTaskSet, 3),  # 30% - MCP server operations
+        (ConcurrentOperationsTaskSet, 2),  # 20% - Concurrent operations
     ]
-    
+
     # Configure user behavior based on load profile
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        
+
         profile = os.getenv("LOAD_TEST_PROFILE", "light").lower()
-        
+
         if profile == "heavy":
             self.wait_time = between(0.5, 2.0)  # Aggressive load
         elif profile == "medium":
             self.wait_time = between(1.0, 3.0)  # Moderate load
         else:  # light
             self.wait_time = between(2.0, 5.0)  # Light load
-    
+
     def on_start(self):
         """Called when a user starts."""
-        print(f"Starting load test user (profile: {os.getenv('LOAD_TEST_PROFILE', 'light')})")
-    
+        print(
+            f"Starting load test user (profile: {os.getenv('LOAD_TEST_PROFILE', 'light')})"
+        )
+
     def on_stop(self):
         """Called when a user stops."""
         print("Stopping load test user")
 
 
 # Load test configuration based on environment
-def get_load_profile() -> Dict[str, Any]:
+def get_load_profile() -> dict[str, Any]:
     """Get load testing configuration based on profile."""
     profile = os.getenv("LOAD_TEST_PROFILE", "light").lower()
-    
+
     profiles = {
         "light": {
             "users": 5,
             "spawn_rate": 1,
             "run_time": "2m",
-            "description": "Light load testing for development"
+            "description": "Light load testing for development",
         },
         "medium": {
             "users": 15,
             "spawn_rate": 3,
-            "run_time": "5m", 
-            "description": "Medium load testing for staging"
+            "run_time": "5m",
+            "description": "Medium load testing for staging",
         },
         "heavy": {
             "users": 50,
             "spawn_rate": 5,
             "run_time": "10m",
-            "description": "Heavy load testing for performance validation"
-        }
+            "description": "Heavy load testing for performance validation",
+        },
     }
-    
+
     return profiles.get(profile, profiles["light"])
 
 
 # Event listeners for custom metrics
 @events.init.add_listener
-def on_locust_init(environment: Environment, **kwargs):
+def on_locust_init(environment: Environment, **kwargs):  # noqa: ARG001
     """Initialize custom metrics and reporting."""
     print("🚀 LLM Task Framework Load Testing Started")
     print(f"Profile: {os.getenv('LOAD_TEST_PROFILE', 'light')}")
@@ -471,22 +469,22 @@ def on_locust_init(environment: Environment, **kwargs):
 
 
 @events.test_stop.add_listener
-def on_test_stop(environment: Environment, **kwargs):
+def on_test_stop(environment: Environment, **kwargs):  # noqa: ARG001
     """Generate performance summary report."""
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("🏁 Load Testing Complete - Performance Summary")
-    print("="*60)
-    
+    print("=" * 60)
+
     # Calculate basic statistics
-    if hasattr(environment.stats, 'total'):
+    if hasattr(environment.stats, "total"):
         total_requests = environment.stats.total.num_requests
         avg_response_time = environment.stats.total.avg_response_time
         failure_rate = environment.stats.total.fail_ratio
-        
+
         print(f"📊 Total Requests: {total_requests}")
         print(f"⏱️  Average Response Time: {avg_response_time:.2f}ms")
         print(f"❌ Failure Rate: {failure_rate:.2%}")
-        
+
         # Performance thresholds
         if avg_response_time > 5000:
             print("⚠️  WARNING: High average response time detected")
@@ -494,8 +492,8 @@ def on_test_stop(environment: Environment, **kwargs):
             print("⚠️  WARNING: High failure rate detected")
         if avg_response_time <= 1000 and failure_rate <= 0.01:
             print("✅ EXCELLENT: Performance within optimal thresholds")
-    
-    print("="*60)
+
+    print("=" * 60)
 
 
 if __name__ == "__main__":
@@ -503,4 +501,6 @@ if __name__ == "__main__":
     profile = get_load_profile()
     print(f"Load Test Profile: {profile['description']}")
     print("Recommended command:")
-    print(f"locust --headless --users {profile['users']} --spawn-rate {profile['spawn_rate']} --run-time {profile['run_time']}")
+    print(
+        f"locust --headless --users {profile['users']} --spawn-rate {profile['spawn_rate']} --run-time {profile['run_time']}"
+    )
