@@ -28,13 +28,13 @@ jobs:
       has-security-changes: ${{ steps.changes.outputs.security }}
       has-performance-changes: ${{ steps.changes.outputs.performance }}
       has-ci-changes: ${{ steps.changes.outputs.ci }}
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
       with:
         fetch-depth: 0
-    
+
     - name: Detect file changes
       uses: dorny/paths-filter@v2
       id: changes
@@ -61,7 +61,7 @@ jobs:
             - '.github/workflows/**'
             - 'pyproject.toml'
             - 'pixi.lock'
-    
+
     - name: Change detection summary
       run: |
         echo "## 🔍 Change Detection Results" >> $GITHUB_STEP_SUMMARY
@@ -147,7 +147,7 @@ jobs:
           reports/safety-report.json
           reports/pip-audit-report.json
         retention-days: 30
-    
+
     - name: Security scan summary
       if: always()
       run: |
@@ -210,10 +210,10 @@ jobs:
         # Use platform-specific optimizations for test execution
         if [[ "${{ matrix.test-marker }}" != "" ]]; then
           echo "Running optimized unit tests for ${{ matrix.os }} Python ${{ matrix.python-version }}..."
-          pixi run -e dev pytest tests -m "not integration and not mcp and ${{ matrix.test-marker }}" --cov=llm_task_framework --cov-report=xml:coverage.xml --cov-report=term --maxfail=5 -x
+          pixi run -e dev pytest tests -m "not integration and not mcp and not benchmark and ${{ matrix.test-marker }}" --cov=llm_task_framework --cov-report=xml:coverage.xml --cov-report=term --maxfail=5 -x
         else
           echo "Running standard unit tests for ${{ matrix.os }} Python ${{ matrix.python-version }}..."
-          pixi run -e dev pytest tests -m "not integration and not mcp" --cov=llm_task_framework --cov-report=xml:coverage.xml --cov-report=term
+          pixi run -e dev pytest tests -m "not integration and not mcp and not benchmark" --cov=llm_task_framework --cov-report=xml:coverage.xml --cov-report=term
         fi
       env:
         # Disable LLM tests in CI unless API keys provided
@@ -227,7 +227,7 @@ jobs:
         # Skip on platforms where integration tests might be flaky
         if [[ "${{ matrix.os }}" == "ubuntu-latest" ]] || [[ "${{ matrix.os }}" == "macos-latest" ]]; then
           echo "Running cross-platform integration tests..."
-          pixi run -e dev pytest tests -m "integration and not mcp" --cov=llm_task_framework --cov-append || [ $? -eq 5 ]
+          pixi run -e dev pytest tests -m "integration and not mcp and not benchmark" --cov=llm_task_framework --cov-append || [ $? -eq 5 ]
         else
           echo "Skipping integration tests on ${{ matrix.os }} for performance optimization"
         fi
@@ -267,7 +267,7 @@ jobs:
         echo "Running advanced integration tests with external services..."
         # Run advanced integration tests that may require external services
         # These run separately to avoid pollution of cross-platform tests
-        pixi run -e dev pytest tests -m "integration" --cov=llm_task_framework --cov-report=xml:integration-coverage.xml --cov-fail-under=0 || [ $? -eq 5 ]
+        pixi run -e dev pytest tests -m "integration and not benchmark" --cov=llm_task_framework --cov-report=xml:integration-coverage.xml --cov-fail-under=0 || [ $? -eq 5 ]
       env:
         ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
@@ -276,7 +276,7 @@ jobs:
       run: |
         echo "Running MCP server tests in isolation..."
         # Run MCP tests separately to prevent any server state pollution
-        pixi run -e dev pytest tests -m "mcp" --cov=llm_task_framework --cov-append --cov-fail-under=0 || [ $? -eq 5 ]
+        pixi run -e dev pytest tests -m "mcp and not benchmark" --cov=llm_task_framework --cov-append --cov-fail-under=0 || [ $? -eq 5 ]
       env:
         ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
@@ -298,27 +298,27 @@ jobs:
     needs: [detect-changes, test]
     if: needs.detect-changes.outputs.has-performance-changes == 'true' || needs.detect-changes.outputs.has-python-changes == 'true' || github.event_name == 'workflow_dispatch'
     continue-on-error: true  # Don't fail CI if performance tests have issues
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-    
+
     - name: Set up Pixi
       uses: prefix-dev/setup-pixi@v0.8.8
       with:
         pixi-version: v0.41.4
         cache: true
-    
+
     - name: Run benchmark tests
       run: |
         echo "Running performance benchmark tests..."
         pixi run -e performance perf-test || echo "Performance tests completed with warnings"
-    
+
     - name: Generate performance profile
       run: |
         echo "Generating performance profile..."
         pixi run -e performance perf-profile || echo "Performance profiling completed"
-    
+
     - name: Upload performance reports
       uses: actions/upload-artifact@v4
       if: always()
@@ -328,7 +328,7 @@ jobs:
           reports/profile.stats
           .pytest_cache/
         retention-days: 7
-    
+
     - name: Performance summary
       if: always()
       run: |
