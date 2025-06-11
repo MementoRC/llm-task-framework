@@ -95,13 +95,13 @@ def cleanup_temp_files() -> Generator[None, None, None]:
     """
     # Track temp files created during test
     temp_paths = set()
-    original_mktemp = tempfile.mktemp
+    original_mkstemp = tempfile.mkstemp
     original_mkdtemp = tempfile.mkdtemp
 
-    def tracking_mktemp(*args: Any, **kwargs: Any) -> str:
-        path = original_mktemp(*args, **kwargs)
+    def tracking_mkstemp(*args: Any, **kwargs: Any) -> tuple[int, str]:
+        fd, path = original_mkstemp(*args, **kwargs)
         temp_paths.add(path)
-        return path
+        return fd, path
 
     def tracking_mkdtemp(*args: Any, **kwargs: Any) -> str:
         path: str = original_mkdtemp(*args, **kwargs)
@@ -110,7 +110,7 @@ def cleanup_temp_files() -> Generator[None, None, None]:
 
     # Patch tempfile functions to track created files
     with (
-        patch("tempfile.mktemp", tracking_mktemp),
+        patch("tempfile.mkstemp", tracking_mkstemp),
         patch("tempfile.mkdtemp", tracking_mkdtemp),
     ):
         yield
