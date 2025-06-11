@@ -5688,7 +5688,7 @@ packages:
 - pypi: .
   name: llm-task-framework
   version: 0.1.0
-  sha256: 8784d8b14543942d464c73632c28637a75ff3d55eaba485b93ffaa3763485de5
+  sha256: 796f45f9744b0142ffdce6243df79ef56e9778bef6fdb648b7d731c9068b932d
   requires_dist:
   - aiofiles>=23.0.0
   - anthropic>=0.25.0
