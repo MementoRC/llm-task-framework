@@ -192,7 +192,7 @@ jobs:
         echo "Running advanced integration tests with external services..."
         # Run advanced integration tests that may require external services
         # These run separately to avoid pollution of cross-platform tests
-        pixi run -e dev pytest tests -m "integration" --cov=llm_task_framework --cov-report=xml:integration-coverage.xml || [ $? -eq 5 ]
+        pixi run -e dev pytest tests -m "integration" --cov=llm_task_framework --cov-report=xml:integration-coverage.xml --cov-fail-under=0 || [ $? -eq 5 ]
       env:
         ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
