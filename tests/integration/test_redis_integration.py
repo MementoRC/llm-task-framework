@@ -22,6 +22,15 @@ except ImportError:
     redis = None  # type: ignore[assignment]
 
 
+def _decode_redis_value(value):
+    """Helper function to handle Redis values that may be bytes or strings."""
+    if value is None:
+        return None
+    if isinstance(value, bytes):
+        return value.decode("utf-8")
+    return value
+
+
 @pytest.fixture(scope="function")
 def redis_client() -> Generator[Any, None, None]:
     """Provide a Redis client for testing.
@@ -93,7 +102,7 @@ def test_redis_basic_operations(redis_client):
 
     # Get value
     retrieved = redis_client.get(key)
-    assert retrieved.decode("utf-8") == value
+    assert _decode_redis_value(retrieved) == value
 
     # Test EXISTS
     exists = redis_client.exists(key)
@@ -181,7 +190,7 @@ def test_redis_expiration(redis_client):
 
     # Verify key exists
     assert redis_client.exists(key) == 1
-    assert redis_client.get(key).decode("utf-8") == value
+    assert _decode_redis_value(redis_client.get(key)) == value
 
     # Check TTL
     ttl = redis_client.ttl(key)
@@ -220,8 +229,8 @@ def test_redis_transaction(redis_client):
     assert isinstance(results[2], int)  # INCR result
 
     # Verify values were set
-    assert redis_client.get(key1).decode("utf-8") == "value1"
-    assert redis_client.get(key2).decode("utf-8") == "value2"
+    assert _decode_redis_value(redis_client.get(key1)) == "value1"
+    assert _decode_redis_value(redis_client.get(key2)) == "value2"
 
 
 @pytest.mark.integration
@@ -313,7 +322,7 @@ def test_redis_connection_pool():
         # Verify all operations succeeded
         for i, client in enumerate(clients):
             value = client.get(f"pool:test:{i}")
-            assert value.decode("utf-8") == f"value_{i}"
+            assert _decode_redis_value(value) == f"value_{i}"
 
         # Cleanup
         for i in range(len(clients)):
