@@ -1,0 +1,274 @@
+name: Production Release
+
+on:
+  push:
+    branches: [ main, master ]
+    paths-ignore:
+      - 'docs/**'
+      - '*.md'
+      - '.github/workflows/dev-*.yml'
+  workflow_dispatch:
+    inputs:
+      release_type:
+        description: 'Release type'
+        required: true
+        default: 'patch'
+        type: choice
+        options:
+        - patch
+        - minor
+        - major
+
+permissions:
+  contents: write
+  packages: write
+  id-token: write
+
+env:
+  PYTHONPATH: src
+  PYTHONUNBUFFERED: "1"
+  FORCE_COLOR: "1"
+
+jobs:
+  # Pre-production validation
+  production-validation:
+    name: Production Validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    outputs:
+      should-release: ${{ steps.check-changes.outputs.should-release }}
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Set up Pixi
+      uses: prefix-dev/setup-pixi@v0.8.8
+      with:
+        pixi-version: v0.41.4
+        cache: true
+
+    - name: Check for significant changes
+      id: check-changes
+      run: |
+        # Check if there are significant changes since last release
+        LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+        if [ -n "$LAST_TAG" ]; then
+          CHANGES=$(git diff --name-only $LAST_TAG..HEAD | grep -E "(src/|pyproject.toml|pixi.toml)" | wc -l)
+        else
+          CHANGES=1  # First release
+        fi
+
+        if [ "$CHANGES" -gt 0 ] || [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+          echo "should-release=true" >> $GITHUB_OUTPUT
+          echo "📦 Significant changes detected, proceeding with release"
+        else
+          echo "should-release=false" >> $GITHUB_OUTPUT
+          echo "ℹ️ No significant changes, skipping release"
+        fi
+
+    - name: Run comprehensive tests
+      if: steps.check-changes.outputs.should-release == 'true'
+      run: pixi run check
+
+    - name: Run security validation
+      if: steps.check-changes.outputs.should-release == 'true'
+      run: pixi run -e security security-all
+
+  # Multi-platform production testing
+  production-test:
+    name: Production Test - ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    needs: [production-validation]
+    if: needs.production-validation.outputs.should-release == 'true'
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Pixi
+      uses: prefix-dev/setup-pixi@v0.8.8
+      with:
+        pixi-version: v0.41.4
+        cache: true
+
+    - name: Run platform-specific tests
+      run: pixi run test
+
+    - name: Test package installation
+      run: |
+        pixi run build
+        pixi run -e prod sh -c "pip install dist/*.whl"
+        pixi run -e prod python -c "import llm_task_framework; print('✅ Production install test passed')"
+
+  # Create production release
+  create-release:
+    name: Create Production Release
+    runs-on: ubuntu-latest
+    needs: [production-validation, production-test]
+    if: needs.production-validation.outputs.should-release == 'true'
+    timeout-minutes: 15
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      release-created: ${{ steps.create-release.outputs.release-created }}
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Set up Pixi
+      uses: prefix-dev/setup-pixi@v0.8.8
+      with:
+        pixi-version: v0.41.4
+        cache: true
+
+    - name: Generate version
+      id: version
+      run: |
+        # Get current version from __version__.py
+        CURRENT_VERSION=$(python -c "exec(open('src/llm_task_framework/__version__.py').read()); print(__version__)")
+
+        # Determine release type
+        if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+          RELEASE_TYPE="${{ github.event.inputs.release_type }}"
+        else
+          # Auto-determine based on commit messages
+          COMMITS=$(git log --oneline $(git describe --tags --abbrev=0 2>/dev/null || echo "HEAD~10")..HEAD)
+          if echo "$COMMITS" | grep -i "feat:" > /dev/null; then
+            RELEASE_TYPE="minor"
+          elif echo "$COMMITS" | grep -i "fix:" > /dev/null; then
+            RELEASE_TYPE="patch"
+          else
+            RELEASE_TYPE="patch"
+          fi
+        fi
+
+        # Calculate new version (simplified semver)
+        IFS='.' read -ra VERSION_PARTS <<< "$CURRENT_VERSION"
+        MAJOR=${VERSION_PARTS[0]}
+        MINOR=${VERSION_PARTS[1]}
+        PATCH=${VERSION_PARTS[2]}
+
+        case $RELEASE_TYPE in
+          major) MAJOR=$((MAJOR + 1)); MINOR=0; PATCH=0 ;;
+          minor) MINOR=$((MINOR + 1)); PATCH=0 ;;
+          patch) PATCH=$((PATCH + 1)) ;;
+        esac
+
+        NEW_VERSION="$MAJOR.$MINOR.$PATCH"
+        echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
+        echo "🏷️ New version: $NEW_VERSION (type: $RELEASE_TYPE)"
+
+    - name: Update version file
+      run: |
+        echo "__version__ = \"${{ steps.version.outputs.version }}\"" > src/llm_task_framework/__version__.py
+        git config user.name "github-actions[bot]"
+        git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+        git add src/llm_task_framework/__version__.py
+        git commit -m "chore: bump version to ${{ steps.version.outputs.version }}"
+
+    - name: Build production packages
+      run: pixi run build
+
+    - name: Generate changelog
+      id: changelog
+      run: |
+        LAST_TAG=$(git describe --tags --abbrev=0 HEAD~1 2>/dev/null || echo "")
+        if [ -n "$LAST_TAG" ]; then
+          CHANGELOG=$(git log --pretty=format:"- %s (%h)" $LAST_TAG..HEAD~1)
+        else
+          CHANGELOG=$(git log --pretty=format:"- %s (%h)" --max-count=20 HEAD~1)
+        fi
+
+        cat > CHANGELOG.md << EOF
+        ## What's Changed in v${{ steps.version.outputs.version }}
+
+        $CHANGELOG
+
+        **Full Changelog**: https://github.com/${{ github.repository }}/compare/${LAST_TAG}...v${{ steps.version.outputs.version }}
+        EOF
+
+    - name: Create GitHub Release
+      id: create-release
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: v${{ steps.version.outputs.version }}
+        name: Release v${{ steps.version.outputs.version }}
+        body_path: CHANGELOG.md
+        files: dist/*
+        draft: false
+        prerelease: false
+        make_latest: true
+
+    - name: Push version commit and tag
+      run: |
+        git tag v${{ steps.version.outputs.version }}
+        git push origin HEAD:${{ github.ref_name }}
+        git push origin v${{ steps.version.outputs.version }}
+
+  # Publish to PyPI
+  publish-pypi:
+    name: Publish to PyPI
+    runs-on: ubuntu-latest
+    needs: [create-release]
+    if: needs.create-release.outputs.release-created
+    environment: production
+    timeout-minutes: 10
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        ref: v${{ needs.create-release.outputs.version }}
+
+    - name: Set up Pixi
+      uses: prefix-dev/setup-pixi@v0.8.8
+      with:
+        pixi-version: v0.41.4
+        cache: true
+
+    - name: Build final packages
+      run: pixi run build
+
+    - name: Publish to PyPI
+      uses: pypa/gh-action-pypi-publish@release/v1
+      with:
+        password: ${{ secrets.PYPI_API_TOKEN }}
+        verbose: true
+
+  # Sync development branch
+  sync-development:
+    name: Sync Development Branch
+    runs-on: ubuntu-latest
+    needs: [create-release]
+    if: needs.create-release.outputs.release-created
+    timeout-minutes: 5
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Sync development branch
+      run: |
+        git config user.name "github-actions[bot]"
+        git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+        # Merge main into development to keep it up to date
+        git checkout development
+        git merge origin/${{ github.ref_name }} --no-edit
+        git push origin development
+
+        echo "✅ Development branch synced with production release"

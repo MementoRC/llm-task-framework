@@ -12,7 +12,8 @@ def test_import_package():
     """Test that the package can be imported."""
     try:
         import llm_task_framework
-        assert hasattr(llm_task_framework, '__version__')
+
+        assert hasattr(llm_task_framework, "__version__")
     except ImportError:
         # Package not installed, this is expected in some CI scenarios
         pytest.skip("Package not installed")
@@ -38,7 +39,8 @@ def test_llm_placeholder():
     # This would contain actual LLM provider tests
     # Skip if no API keys are available
     import os
-    if not (os.getenv('ANTHROPIC_API_KEY') or os.getenv('OPENAI_API_KEY')):
+
+    if not (os.getenv("ANTHROPIC_API_KEY") or os.getenv("OPENAI_API_KEY")):
         pytest.skip("No LLM API keys available")
     assert True
 

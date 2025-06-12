@@ -1,0 +1,4 @@
+# This directory is for generated reports
+# Security scan reports: bandit-report.json, safety-report.json, pip-audit-report.json
+# Performance reports: profile.stats, load-test.json
+# Coverage reports: coverage.xml, coverage.json

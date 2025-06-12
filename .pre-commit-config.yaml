@@ -1,7 +1,7 @@
 repos:
   # Ruff for fast Python linting and formatting
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.8.9
+    rev: v0.11.13
     hooks:
       - id: ruff
         args: [--fix]
@@ -9,7 +9,7 @@ repos:
 
   # Basic pre-commit hooks
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.5.0
+    rev: v5.0.0
     hooks:
       - id: trailing-whitespace
       - id: end-of-file-fixer
@@ -25,15 +25,15 @@ repos:
 
   # MyPy type checking
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.8.0
+    rev: v1.16.0
     hooks:
       - id: mypy
-        additional_dependencies: [types-PyYAML, types-toml]
+        additional_dependencies: [types-PyYAML, types-toml, pytest]
         args: [--config-file=pyproject.toml]
 
   # Security scanning
   - repo: https://github.com/PyCQA/bandit
-    rev: 1.7.5
+    rev: 1.8.3
     hooks:
       - id: bandit
         args: ['-c', 'pyproject.toml']
@@ -41,14 +41,14 @@ repos:
 
   # Secret detection
   - repo: https://github.com/Yelp/detect-secrets
-    rev: v1.4.0
+    rev: v1.5.0
     hooks:
       - id: detect-secrets
         args: ['--baseline', '.secrets.baseline']
 
   # Validate pyproject.toml
   - repo: https://github.com/abravalheri/validate-pyproject
-    rev: v0.15
+    rev: v0.24.1
     hooks:
       - id: validate-pyproject
 
@@ -66,7 +66,7 @@ repos:
 
   # Documentation
   - repo: https://github.com/pycqa/doc8
-    rev: v1.1.1
+    rev: v1.1.2
     hooks:
       - id: doc8
         args: ['--max-line-length=88']

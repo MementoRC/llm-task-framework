@@ -1,0 +1,156 @@
+name: Development Integration
+
+on:
+  push:
+    branches: [ development ]
+  pull_request:
+    branches: [ development ]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHONPATH: src
+  PYTHONUNBUFFERED: "1"
+  FORCE_COLOR: "1"
+
+jobs:
+  # Fast feedback for development branch
+  quick-checks:
+    name: Quick Development Checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Pixi
+      uses: prefix-dev/setup-pixi@v0.8.8
+      with:
+        pixi-version: v0.41.4
+        cache: true
+
+    - name: Quick formatting check
+      run: pixi run -e dev format-check
+
+    - name: Quick linting
+      run: pixi run -e dev lint
+
+    - name: Fast tests
+      run: pixi run -e dev pytest -x -q --no-cov
+
+  # Comprehensive testing for development integration
+  integration-tests:
+    name: Development Integration Tests
+    runs-on: ubuntu-latest
+    needs: [quick-checks]
+    timeout-minutes: 20
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Pixi
+      uses: prefix-dev/setup-pixi@v0.8.8
+      with:
+        pixi-version: v0.41.4
+        cache: true
+
+    - name: Run full test suite
+      run: pixi run -e dev test-cov
+
+    - name: Run type checking
+      run: pixi run -e dev typecheck
+
+    - name: Upload coverage
+      uses: codecov/codecov-action@v3
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        file: ./coverage.xml
+        flags: development
+        name: development-coverage
+
+  # Security checks for development
+  security-scan:
+    name: Development Security Scan
+    runs-on: ubuntu-latest
+    needs: [quick-checks]
+    timeout-minutes: 15
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Pixi
+      uses: prefix-dev/setup-pixi@v0.8.8
+      with:
+        pixi-version: v0.41.4
+        cache: true
+
+    - name: Run security scans
+      run: pixi run -e security security-all
+      continue-on-error: true
+
+    - name: Upload security reports
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: dev-security-reports
+        path: |
+          *-report.json
+        retention-days: 7
+
+  # Package building test
+  package-test:
+    name: Development Package Test
+    runs-on: ubuntu-latest
+    needs: [integration-tests]
+    timeout-minutes: 10
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Pixi
+      uses: prefix-dev/setup-pixi@v0.8.8
+      with:
+        pixi-version: v0.41.4
+        cache: true
+
+    - name: Build package
+      run: pixi run -e dev build
+
+    - name: Test package installation
+      run: |
+        pixi run -e prod sh -c "pip install dist/*.whl"
+        pixi run -e prod python -c "import llm_task_framework; print(\"Package import successful\")"
+
+  # Development status summary
+  dev-status:
+    name: Development Status
+    runs-on: ubuntu-latest
+    needs: [quick-checks, integration-tests, security-scan, package-test]
+    if: always()
+
+    steps:
+    - name: Development workflow summary
+      run: |
+        echo "## Development Workflow Summary" >> $GITHUB_STEP_SUMMARY
+        echo "| Check | Status |" >> $GITHUB_STEP_SUMMARY
+        echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
+        echo "| Quick Checks | ${{ needs.quick-checks.result }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| Integration Tests | ${{ needs.integration-tests.result }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| Security Scan | ${{ needs.security-scan.result }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| Package Test | ${{ needs.package-test.result }} |" >> $GITHUB_STEP_SUMMARY
+
+        # Determine overall status
+        if [[ "${{ needs.quick-checks.result }}" == "success" && "${{ needs.integration-tests.result }}" == "success" && "${{ needs.package-test.result }}" == "success" ]]; then
+          echo "✅ **Development branch ready for merge to main**" >> $GITHUB_STEP_SUMMARY
+          exit 0
+        else
+          echo "❌ **Development branch needs attention before merge**" >> $GITHUB_STEP_SUMMARY
+          exit 1
+        fi

@@ -61,10 +61,10 @@ Our CI/CD pipeline includes:
 ```python
 # ✅ Good: Use environment variables
 import os
-api_key = os.getenv("ANTHROPIC_API_KEY")
+api_key = os.getenv("ANTHROPIC_API_KEY")  # pragma: allowlist secret
 
 # ❌ Bad: Hard-code API keys
-api_key = "sk-ant-api03-..."
+api_key = "sk-ant-api03-..."  # pragma: allowlist secret
 ```
 
 ### Input Validation
@@ -75,7 +75,7 @@ from pydantic import BaseModel, validator
 
 class TaskInput(BaseModel):
     prompt: str
-    
+
     @validator('prompt')
     def validate_prompt(cls, v):
         if len(v) > 10000:
