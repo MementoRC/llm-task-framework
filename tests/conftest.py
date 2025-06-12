@@ -171,6 +171,56 @@ def temp_project_dir() -> Generator[Path, None, None]:
 
 
 @pytest.fixture(scope="function")
+def redis_connection() -> Generator[Any, None, None]:
+    """Provide Redis connection for integration tests.
+
+    Safely handles Redis connection with fallback strategies.
+    Returns None if Redis is not available.
+    """
+    try:
+        import redis  # type: ignore[import-unresolved]
+    except ImportError:
+        # Redis not available, yield None to allow graceful skipping
+        yield None
+        return
+
+    redis_url = os.environ.get("REDIS_URL", "redis://localhost:6379")
+    test_with_services = os.environ.get("TEST_WITH_SERVICES", "false").lower() == "true"
+
+    if not test_with_services:
+        # Service container testing disabled
+        yield None
+        return
+
+    client = None
+    try:
+        # Create Redis client with timeout
+        client = redis.Redis.from_url(redis_url, decode_responses=True, socket_timeout=5)
+
+        # Test connection
+        client.ping()
+
+        # Use test-specific database
+        client.select(15)
+        client.flushdb()  # Clear test database
+
+        yield client
+
+    except (redis.ConnectionError, redis.TimeoutError, ConnectionRefusedError):
+        # Redis not available, yield None for graceful skipping
+        yield None
+
+    finally:
+        # Cleanup
+        if client:
+            try:
+                client.flushdb()  # Clear test data
+                client.close()
+            except Exception:
+                pass  # Ignore cleanup errors
+
+
+@pytest.fixture(scope="function")
 def mock_api_keys() -> Generator[dict[str, str], None, None]:
     """Provide mock API keys for testing without real credentials.
 

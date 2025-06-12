@@ -252,6 +252,18 @@ jobs:
     needs: [test]
     if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
 
+    # Service containers for enhanced integration testing (Ubuntu only)
+    services:
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -262,6 +274,15 @@ jobs:
         pixi-version: v0.41.4
         cache: true
 
+    - name: Wait for Redis service
+      run: |
+        echo "Waiting for Redis service to be ready..."
+        # Install redis-tools for health checks
+        sudo apt-get update && sudo apt-get install -y redis-tools
+        # Wait for Redis with timeout
+        timeout 30 bash -c 'until redis-cli -h localhost -p 6379 ping; do sleep 1; done' || echo "Redis not available, continuing without it"
+        echo "Redis service ready (or timeout reached)"
+
     - name: Run advanced integration tests
       run: |
         echo "Running advanced integration tests with external services..."
@@ -269,8 +290,12 @@ jobs:
         # These run separately to avoid pollution of cross-platform tests
         pixi run -e dev pytest tests -m "integration and not benchmark" --cov=llm_task_framework --cov-report=xml:integration-coverage.xml --cov-fail-under=0 || [ $? -eq 5 ]
       env:
+        # LLM API keys
         ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        # Service container connection details
+        REDIS_URL: redis://localhost:6379
+        TEST_WITH_SERVICES: true
 
     - name: Run MCP server tests (isolated)
       run: |
