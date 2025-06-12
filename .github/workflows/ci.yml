@@ -263,6 +263,16 @@ jobs:
           --health-retries 5
         ports:
           - 6379:6379
+      
+      websocket-echo:
+        image: jmalloc/echo-server
+        options: >-
+          --health-cmd "curl -f http://localhost:8080/ || exit 1"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 8080:8080
 
     steps:
     - name: Checkout code
@@ -283,6 +293,13 @@ jobs:
         timeout 30 bash -c 'until redis-cli -h localhost -p 6379 ping; do sleep 1; done' || echo "Redis not available, continuing without it"
         echo "Redis service ready (or timeout reached)"
 
+    - name: Wait for WebSocket echo service
+      run: |
+        echo "Waiting for WebSocket echo service to be ready..."
+        # Wait for WebSocket echo server with timeout
+        timeout 30 bash -c 'until curl -f http://localhost:8080/ >/dev/null 2>&1; do sleep 1; done' || echo "WebSocket echo server not available, continuing without it"
+        echo "WebSocket echo service ready (or timeout reached)"
+
     - name: Run advanced integration tests
       run: |
         echo "Running advanced integration tests with external services..."
@@ -295,6 +312,7 @@ jobs:
         OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         # Service container connection details
         REDIS_URL: redis://localhost:6379
+        WEBSOCKET_URL: ws://localhost:8080
         TEST_WITH_SERVICES: true
 
     - name: Run MCP server tests (isolated)

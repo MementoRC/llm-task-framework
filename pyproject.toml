@@ -335,6 +335,7 @@ twine = ">=4.0.0"
 
 # Integration testing dependencies
 redis = ">=4.0.0"
+websockets = ">=11.0.0"
 
 [tool.pixi.feature.test.pypi-dependencies]
 # Additional testing tools
@@ -342,6 +343,8 @@ pytest-json-report = ">=1.5.0"
 pytest-html = ">=3.1.0"
 # Redis for integration testing
 redis = ">=4.0.0"
+# WebSocket for integration testing
+websockets = ">=11.0.0"
 
 [tool.pixi.feature.docs.pypi-dependencies]
 # Documentation dependencies
