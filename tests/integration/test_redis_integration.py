@@ -93,7 +93,7 @@ def test_redis_basic_operations(redis_client):
 
     # Get value
     retrieved = redis_client.get(key)
-    assert retrieved == value
+    assert retrieved.decode('utf-8') == value
 
     # Test EXISTS
     exists = redis_client.exists(key)
@@ -181,7 +181,7 @@ def test_redis_expiration(redis_client):
 
     # Verify key exists
     assert redis_client.exists(key) == 1
-    assert redis_client.get(key) == value
+    assert redis_client.get(key).decode('utf-8') == value
 
     # Check TTL
     ttl = redis_client.ttl(key)
@@ -220,8 +220,8 @@ def test_redis_transaction(redis_client):
     assert isinstance(results[2], int)  # INCR result
 
     # Verify values were set
-    assert redis_client.get(key1) == "value1"
-    assert redis_client.get(key2) == "value2"
+    assert redis_client.get(key1).decode('utf-8') == "value1"
+    assert redis_client.get(key2).decode('utf-8') == "value2"
 
 
 @pytest.mark.integration
@@ -313,7 +313,7 @@ def test_redis_connection_pool():
         # Verify all operations succeeded
         for i, client in enumerate(clients):
             value = client.get(f"pool:test:{i}")
-            assert value == f"value_{i}"
+            assert value.decode('utf-8') == f"value_{i}"
 
         # Cleanup
         for i in range(len(clients)):
