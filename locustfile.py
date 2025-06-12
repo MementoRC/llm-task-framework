@@ -25,7 +25,7 @@ Environment Variables:
 
 import json
 import os
-import subprocess
+import subprocess  # nosec B404
 import tempfile
 import time
 from typing import Any

@@ -334,9 +334,7 @@ class TestDataProcessingBenchmarks:
             return len(parsed_data["tasks"])
 
         result = benchmark(json_operations)
-        from typing import Any
-
-        result_typed: Any = result
+        result_typed: int = result  # result should be int
         assert result_typed == 50
 
     @pytest.mark.benchmark
@@ -367,9 +365,7 @@ class TestDataProcessingBenchmarks:
             return processed_count
 
         result = benchmark(process_large_dataset)
-        from typing import Any
-
-        result_typed: Any = result
+        result_typed: int = result  # result should be int
         assert result_typed > 0
 
 

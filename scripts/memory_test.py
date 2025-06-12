@@ -198,7 +198,7 @@ def main() -> int:
     if TYPE_CHECKING:
         from collections.abc import Callable
 
-    tests: list[tuple[str, "Callable[[], bool]"]] = [
+    tests: list[tuple[str, Callable[[], bool]]] = [
         ("Framework Import", test_framework_import),
         ("CLI Operations", test_cli_memory),
         ("MCP Server", test_mcp_server_memory),
