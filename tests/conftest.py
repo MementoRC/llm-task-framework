@@ -37,7 +37,7 @@ async def auto_cleanup_async_resources() -> AsyncGenerator[None, None]:
 
     # Cleanup any pending aiohttp sessions if aiohttp is available
     try:
-        import aiohttp  # type: ignore[import-not-found]
+        import aiohttp  # type: ignore[import-untyped]
 
         # Close any unclosed client sessions
         connector = getattr(aiohttp, "_connector", None)
@@ -178,7 +178,7 @@ def redis_connection() -> Generator[Any, None, None]:
     Returns None if Redis is not available.
     """
     try:
-        import redis  # type: ignore[import-unresolved]
+        import redis
     except ImportError:
         # Redis not available, yield None to allow graceful skipping
         yield None
@@ -195,7 +195,9 @@ def redis_connection() -> Generator[Any, None, None]:
     client = None
     try:
         # Create Redis client with timeout
-        client = redis.Redis.from_url(redis_url, decode_responses=True, socket_timeout=5)
+        client = redis.Redis.from_url(
+            redis_url, decode_responses=True, socket_timeout=5
+        )
 
         # Test connection
         client.ping()

@@ -222,6 +222,11 @@ module = [
     "openai.*",
     "rich.*",
     "click.*",
+    "redis.*",
+    "memory_profiler.*",
+    "pytest_benchmark.*",
+    "aiohttp.*",
+    "locust.*",
 ]
 ignore_missing_imports = true
 
@@ -328,7 +333,7 @@ pre-commit = ">=3.0.0"
 build = ">=0.10.0"
 twine = ">=4.0.0"
 
-# Integration testing dependencies  
+# Integration testing dependencies
 redis = ">=4.0.0"
 
 [tool.pixi.feature.test.pypi-dependencies]

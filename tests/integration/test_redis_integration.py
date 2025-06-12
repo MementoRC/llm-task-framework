@@ -6,6 +6,8 @@ Based on patterns from candles-feed and hb-strategy-sandbox projects.
 
 import os
 import time
+from collections.abc import Generator
+from typing import Any
 from unittest.mock import patch
 
 import pytest
@@ -13,14 +15,15 @@ import pytest
 # Try to import redis, but gracefully handle if not available
 try:
     import redis
+
     REDIS_AVAILABLE = True
 except ImportError:
     REDIS_AVAILABLE = False
-    redis = None  # type: ignore
+    redis = None  # type: ignore[assignment]
 
 
 @pytest.fixture(scope="function")
-def redis_client() -> redis.Redis | None:
+def redis_client() -> Generator[Any, None, None]:
     """Provide a Redis client for testing.
 
     Returns None if Redis is not available or connection fails.
@@ -113,11 +116,7 @@ def test_redis_hash_operations(redis_client):
         pytest.skip("Redis client not available")
 
     hash_key = "test:hash:data"
-    hash_data = {
-        "field1": "value1",
-        "field2": "value2",
-        "counter": "42"
-    }
+    hash_data = {"field1": "value1", "field2": "value2", "counter": "42"}
 
     # Set hash fields
     result = redis_client.hset(hash_key, mapping=hash_data)
@@ -230,8 +229,12 @@ def test_redis_fallback_when_unavailable():
     """Test graceful fallback when Redis is unavailable."""
 
     # Mock Redis to raise connection error
-    with patch('redis.Redis.from_url') as mock_redis:
-        mock_redis.side_effect = redis.ConnectionError("Connection refused") if REDIS_AVAILABLE else ImportError("Redis not available")
+    with patch("redis.Redis.from_url") as mock_redis:
+        mock_redis.side_effect = (
+            redis.ConnectionError("Connection refused")
+            if REDIS_AVAILABLE
+            else ImportError("Redis not available")
+        )
 
         # This should skip gracefully without failing the test suite
         redis_url = os.getenv("REDIS_URL", "redis://localhost:6379")
@@ -333,4 +336,3 @@ def test_redis_error_handling():
     with pytest.raises(redis.ConnectionError):
         invalid_client = redis.Redis(host="invalid-host", port=6379, socket_timeout=1)
         invalid_client.ping()
-
