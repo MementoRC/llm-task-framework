@@ -178,6 +178,7 @@ def redis_client() -> Generator[Any, None, None]:
     Safely handles Redis connection with fallback strategies.
     Skips tests if Redis is not available.
     """
+    redis = None
     try:
         import redis
     except ImportError:
