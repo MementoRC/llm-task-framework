@@ -202,15 +202,7 @@ jobs:
         pixi-version: v0.41.4
         cache: true
 
-    - name: Install package in editable mode
-      shell: bash
-      run: |
-        if [[ "$RUNNER_OS" == "Windows" ]]; then
-          # Use Pixi's built-in install for editable mode on Windows to avoid pip path issues
-          pixi run -e dev python -m pip install -e .
-        else
-          pixi run -e dev pip install -e .
-        fi
+    # Removed explicit editable install step; Pixi handles editable install automatically via environment setup.
 
     - name: Run unit tests with coverage
       shell: bash
@@ -294,8 +286,7 @@ jobs:
         pixi-version: v0.41.4
         cache: true
 
-    - name: Install package in editable mode
-      run: pixi run -e dev pip install -e .
+    # Pixi handles editable install automatically via environment setup.
 
     - name: Wait for Redis service
       run: |
@@ -448,8 +439,7 @@ jobs:
         pixi-version: v0.41.4
         cache: true
 
-    - name: Install package in editable mode
-      run: pixi run -e dev pip install -e .
+    # Pixi handles editable install automatically via environment setup.
 
     - name: Install benchmark dependencies
       run: pixi run -e dev pip install pytest-benchmark
