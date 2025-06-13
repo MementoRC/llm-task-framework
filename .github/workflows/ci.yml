@@ -202,6 +202,9 @@ jobs:
         pixi-version: v0.41.4
         cache: true
 
+    - name: Install package in editable mode
+      run: pixi run -e dev pip install -e .
+
     - name: Run unit tests with coverage
       shell: bash
       run: |
@@ -263,7 +266,7 @@ jobs:
           --health-retries 5
         ports:
           - 6379:6379
-      
+
       websocket-echo:
         image: jmalloc/echo-server
         options: >-
@@ -283,6 +286,9 @@ jobs:
       with:
         pixi-version: v0.41.4
         cache: true
+
+    - name: Install package in editable mode
+      run: pixi run -e dev pip install -e .
 
     - name: Wait for Redis service
       run: |
@@ -434,6 +440,9 @@ jobs:
       with:
         pixi-version: v0.41.4
         cache: true
+
+    - name: Install package in editable mode
+      run: pixi run -e dev pip install -e .
 
     - name: Install benchmark dependencies
       run: pixi run -e dev pip install pytest-benchmark

@@ -5,6 +5,7 @@ Based on patterns from Redis integration and candles-feed/hb-strategy-sandbox pr
 """
 
 import asyncio
+import contextlib
 import os
 import time
 from collections.abc import AsyncGenerator
@@ -53,10 +54,8 @@ async def websocket_client() -> AsyncGenerator[Any, None]:
         pytest.skip(f"WebSocket connection failed: {e}")
     finally:
         if client:
-            try:
+            with contextlib.suppress(Exception):
                 await client.close()
-            except Exception:
-                pass  # Best effort cleanup
 
 
 @pytest.mark.integration
@@ -179,7 +178,7 @@ async def test_websocket_multiple_messages(websocket_client):
 
     # Verify all messages were echoed correctly
     assert len(responses) == len(messages)
-    for original, echoed in zip(messages, responses):
+    for original, echoed in zip(messages, responses, strict=False):
         assert echoed == original
 
 
