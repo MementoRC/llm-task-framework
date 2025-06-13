@@ -293,16 +293,16 @@ jobs:
         echo "Waiting for Redis service to be ready..."
         # Install redis-tools for health checks
         sudo apt-get update && sudo apt-get install -y redis-tools
-        # Wait for Redis with timeout
-        timeout 30 bash -c 'until redis-cli -h localhost -p 6379 ping; do sleep 1; done' || echo "Redis not available, continuing without it"
-        echo "Redis service ready (or timeout reached)"
+        # Wait for Redis with timeout, fail if not ready
+        timeout 30 bash -c 'until redis-cli -h localhost -p 6379 ping | grep PONG; do sleep 1; done'
+        echo "✅ Redis service is ready."
 
     - name: Wait for WebSocket echo service
       run: |
         echo "Waiting for WebSocket echo service to be ready..."
-        # Wait for WebSocket echo server with timeout (root path returns 200 for jmalloc/echo-server)
-        timeout 30 bash -c 'until wget --spider -q http://localhost:8080/; do sleep 1; done' || echo "WebSocket echo server not available, continuing without it"
-        echo "WebSocket echo service ready (or timeout reached)"
+        # Wait for WebSocket echo server with timeout, fail if not ready
+        timeout 30 bash -c 'until wget --spider -q http://localhost:8080/; do sleep 1; done'
+        echo "✅ WebSocket echo service is ready."
 
     - name: Run advanced integration tests
       run: |

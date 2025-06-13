@@ -5,7 +5,6 @@ Based on patterns from Redis integration and candles-feed/hb-strategy-sandbox pr
 """
 
 import asyncio
-import contextlib
 import os
 import time
 from collections.abc import AsyncGenerator
@@ -17,58 +16,72 @@ import pytest
 # Try to import websockets, but gracefully handle if not available
 try:
     import websockets
+    from websockets.client import WebSocketClientProtocol
     from websockets.exceptions import ConnectionClosed, WebSocketException
 
     WEBSOCKETS_AVAILABLE = True
 except ImportError:
     WEBSOCKETS_AVAILABLE = False
     websockets = None  # type: ignore[assignment]
-    ConnectionClosed = Exception  # type: ignore[misc,assignment]
-    WebSocketException = Exception  # type: ignore[misc,assignment]
+    WebSocketClientProtocol = Any  # type: ignore[misc, assignment]
+    ConnectionClosed = Exception  # type: ignore[assignment]
+    WebSocketException = Exception  # type: ignore[assignment]
 
 
 @pytest.fixture(scope="function")
-async def websocket_client() -> AsyncGenerator[Any, None]:
+async def websocket_client() -> AsyncGenerator[WebSocketClientProtocol, None]:
     """Provide a WebSocket client for testing.
 
-    Returns None if WebSocket library is not available or connection fails.
-    This allows tests to gracefully skip when WebSocket service is unavailable.
+    Skips tests if WebSocket library is not available or connection fails.
     """
     if not WEBSOCKETS_AVAILABLE:
-        yield None
-        return
+        pytest.skip("websockets library not available")
 
     websocket_url = os.getenv("WEBSOCKET_URL", "ws://localhost:8080")
     test_with_services = os.getenv("TEST_WITH_SERVICES", "false").lower() == "true"
 
     if not test_with_services:
-        yield None
-        return
+        pytest.skip(
+            "Service container testing disabled (TEST_WITH_SERVICES is not 'true')"
+        )
 
-    client = None
-    try:
-        # Test connection with timeout
-        client = await asyncio.wait_for(websockets.connect(websocket_url), timeout=5.0)
-        yield client
-    except (OSError, asyncio.TimeoutError, WebSocketException) as e:
-        pytest.skip(f"WebSocket connection failed: {e}")
-    finally:
-        if client:
-            with contextlib.suppress(Exception):
+    client: WebSocketClientProtocol | None = None
+    last_exception = None
+    for attempt in range(3):
+        try:
+            # Use a longer timeout for CI environments
+            connect_coro = websockets.connect(websocket_url, open_timeout=10)
+            client = await asyncio.wait_for(connect_coro, timeout=10.0)
+
+            # Perform a quick ping-pong to ensure the connection is responsive
+            pong_waiter = await client.ping()
+            await asyncio.wait_for(pong_waiter, timeout=5.0)
+
+            # If we got here, connection is good
+            break
+        except (OSError, asyncio.TimeoutError, WebSocketException) as e:
+            last_exception = e
+            if client:
                 await client.close()
+            client = None
+            if attempt < 2:
+                await asyncio.sleep(2 * (attempt + 1))  # Exponential backoff
+
+    if not client:
+        pytest.skip(f"WebSocket connection failed after 3 retries: {last_exception}")
+
+    try:
+        yield client
+    finally:
+        if client and not client.closed:
+            await client.close()
 
 
 @pytest.mark.integration
 @pytest.mark.network
 @pytest.mark.asyncio
-async def test_websocket_connection(websocket_client):
+async def test_websocket_connection(websocket_client: WebSocketClientProtocol):
     """Test basic WebSocket connection and ping."""
-    if not WEBSOCKETS_AVAILABLE:
-        pytest.skip("WebSocket library not available")
-
-    if websocket_client is None:
-        pytest.skip("WebSocket client not available")
-
     # Test ping/pong
     await websocket_client.ping()
 
@@ -80,14 +93,8 @@ async def test_websocket_connection(websocket_client):
 @pytest.mark.integration
 @pytest.mark.network
 @pytest.mark.asyncio
-async def test_websocket_echo_basic(websocket_client):
+async def test_websocket_echo_basic(websocket_client: WebSocketClientProtocol):
     """Test basic WebSocket echo functionality."""
-    if not WEBSOCKETS_AVAILABLE:
-        pytest.skip("WebSocket library not available")
-
-    if websocket_client is None:
-        pytest.skip("WebSocket client not available")
-
     # Test simple message echo
     test_message = "Hello WebSocket Echo Server!"
 
@@ -100,14 +107,8 @@ async def test_websocket_echo_basic(websocket_client):
 @pytest.mark.integration
 @pytest.mark.network
 @pytest.mark.asyncio
-async def test_websocket_echo_json(websocket_client):
+async def test_websocket_echo_json(websocket_client: WebSocketClientProtocol):
     """Test WebSocket echo with JSON messages."""
-    if not WEBSOCKETS_AVAILABLE:
-        pytest.skip("WebSocket library not available")
-
-    if websocket_client is None:
-        pytest.skip("WebSocket client not available")
-
     import json
 
     # Test JSON message echo
@@ -133,14 +134,8 @@ async def test_websocket_echo_json(websocket_client):
 @pytest.mark.integration
 @pytest.mark.network
 @pytest.mark.asyncio
-async def test_websocket_echo_binary(websocket_client):
+async def test_websocket_echo_binary(websocket_client: WebSocketClientProtocol):
     """Test WebSocket echo with binary messages."""
-    if not WEBSOCKETS_AVAILABLE:
-        pytest.skip("WebSocket library not available")
-
-    if websocket_client is None:
-        pytest.skip("WebSocket client not available")
-
     # Test binary message echo
     test_binary = b"Binary data: \x00\x01\x02\x03\xff"
 
@@ -153,14 +148,8 @@ async def test_websocket_echo_binary(websocket_client):
 @pytest.mark.integration
 @pytest.mark.network
 @pytest.mark.asyncio
-async def test_websocket_multiple_messages(websocket_client):
+async def test_websocket_multiple_messages(websocket_client: WebSocketClientProtocol):
     """Test multiple consecutive WebSocket messages."""
-    if not WEBSOCKETS_AVAILABLE:
-        pytest.skip("WebSocket library not available")
-
-    if websocket_client is None:
-        pytest.skip("WebSocket client not available")
-
     # Test multiple messages in sequence
     messages = [
         "Message 1",
@@ -185,14 +174,8 @@ async def test_websocket_multiple_messages(websocket_client):
 @pytest.mark.integration
 @pytest.mark.network
 @pytest.mark.asyncio
-async def test_websocket_large_message(websocket_client):
+async def test_websocket_large_message(websocket_client: WebSocketClientProtocol):
     """Test WebSocket echo with large messages."""
-    if not WEBSOCKETS_AVAILABLE:
-        pytest.skip("WebSocket library not available")
-
-    if websocket_client is None:
-        pytest.skip("WebSocket client not available")
-
     # Test large message (1MB)
     large_message = "A" * (1024 * 1024)
 
@@ -235,9 +218,9 @@ async def test_websocket_concurrent_connections():
 
     # Verify all connections succeeded
     successful = [r for r in results if r is True]
-    assert len(successful) == 5, (
-        f"Expected 5 successful connections, got {len(successful)}"
-    )
+    assert (
+        len(successful) == 5
+    ), f"Expected 5 successful connections, got {len(successful)}"
 
 
 @pytest.mark.integration
@@ -314,14 +297,8 @@ def test_websocket_error_handling():
 @pytest.mark.integration
 @pytest.mark.network
 @pytest.mark.asyncio
-async def test_websocket_performance_basic(websocket_client):
+async def test_websocket_performance_basic(websocket_client: WebSocketClientProtocol):
     """Test basic WebSocket performance characteristics."""
-    if not WEBSOCKETS_AVAILABLE:
-        pytest.skip("WebSocket library not available")
-
-    if websocket_client is None:
-        pytest.skip("WebSocket client not available")
-
     # Test message throughput
     num_messages = 100
     message = "Performance test message"
@@ -338,7 +315,7 @@ async def test_websocket_performance_basic(websocket_client):
 
     # Basic performance assertions (adjust thresholds as needed)
     messages_per_second = num_messages / elapsed_time
-    assert messages_per_second > 10, (
-        f"Performance too slow: {messages_per_second:.2f} msg/s"
-    )
+    assert (
+        messages_per_second > 10
+    ), f"Performance too slow: {messages_per_second:.2f} msg/s"
     assert elapsed_time < 30.0, f"Total time too slow: {elapsed_time:.2f}s"

@@ -6,8 +6,6 @@ Based on patterns from candles-feed and hb-strategy-sandbox projects.
 
 import os
 import time
-from collections.abc import Generator
-from typing import Any
 from unittest.mock import patch
 
 import pytest
@@ -29,43 +27,6 @@ def _decode_redis_value(value):
     if isinstance(value, bytes):
         return value.decode("utf-8")
     return value
-
-
-@pytest.fixture(scope="function")
-def redis_client() -> Generator[Any, None, None]:
-    """Provide a Redis client for testing.
-
-    Returns None if Redis is not available or connection fails.
-    This allows tests to gracefully skip when Redis is unavailable.
-    """
-    if not REDIS_AVAILABLE:
-        pytest.skip("Redis library not available")
-
-    redis_url = os.getenv("REDIS_URL", "redis://localhost:6379")
-    test_with_services = os.getenv("TEST_WITH_SERVICES", "false").lower() == "true"
-
-    if not test_with_services:
-        pytest.skip("Service container testing disabled")
-
-    try:
-        client = redis.Redis.from_url(redis_url, decode_responses=True)
-        # Test connection with timeout
-        client.ping()
-
-        # Use a test-specific database to avoid conflicts
-        client.select(15)  # Use database 15 for tests
-
-        # Clear test database
-        client.flushdb()
-
-        yield client
-
-        # Cleanup after test
-        client.flushdb()
-        client.close()
-
-    except (redis.ConnectionError, redis.TimeoutError) as e:
-        pytest.skip(f"Redis connection failed: {e}")
 
 
 @pytest.mark.integration
