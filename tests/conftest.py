@@ -228,7 +228,7 @@ def redis_client() -> Generator[Any, None, None]:
                 client.close()
             except Exception as e:
                 # Log cleanup errors but don't fail the test suite
-                warnings.warn(f"Redis cleanup failed: {e}")
+                warnings.warn(f"Redis cleanup failed: {e}", stacklevel=2)
 
 
 @pytest.fixture(scope="function")
