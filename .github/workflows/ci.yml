@@ -203,7 +203,14 @@ jobs:
         cache: true
 
     - name: Install package in editable mode
-      run: pixi run -e dev pip install -e .
+      shell: bash
+      run: |
+        if [[ "$RUNNER_OS" == "Windows" ]]; then
+          # Use Pixi's built-in install for editable mode on Windows to avoid pip path issues
+          pixi run -e dev python -m pip install -e .
+        else
+          pixi run -e dev pip install -e .
+        fi
 
     - name: Run unit tests with coverage
       shell: bash
