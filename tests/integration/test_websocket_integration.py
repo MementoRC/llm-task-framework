@@ -218,9 +218,9 @@ async def test_websocket_concurrent_connections():
 
     # Verify all connections succeeded
     successful = [r for r in results if r is True]
-    assert (
-        len(successful) == 5
-    ), f"Expected 5 successful connections, got {len(successful)}"
+    assert len(successful) == 5, (
+        f"Expected 5 successful connections, got {len(successful)}"
+    )
 
 
 @pytest.mark.integration
@@ -315,7 +315,7 @@ async def test_websocket_performance_basic(websocket_client: WebSocketClientProt
 
     # Basic performance assertions (adjust thresholds as needed)
     messages_per_second = num_messages / elapsed_time
-    assert (
-        messages_per_second > 10
-    ), f"Performance too slow: {messages_per_second:.2f} msg/s"
+    assert messages_per_second > 10, (
+        f"Performance too slow: {messages_per_second:.2f} msg/s"
+    )
     assert elapsed_time < 30.0, f"Total time too slow: {elapsed_time:.2f}s"

@@ -269,7 +269,7 @@ jobs:
       websocket-echo:
         image: jmalloc/echo-server:latest
         options: >-
-          --health-cmd "wget --spider -q http://localhost:8080/ || exit 1"
+          --health-cmd "sh -c 'exec 3<>/dev/tcp/localhost/8080 && echo -e \"GET / HTTP/1.0\\r\\n\\r\\n\" >&3 && head -n 1 <&3 | grep -q \"HTTP/\"'"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
