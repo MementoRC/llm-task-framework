@@ -268,11 +268,8 @@ jobs:
 
       websocket-echo:
         image: jmalloc/echo-server:latest
-        options: >-
-          --health-cmd "curl -f http://localhost:8080/ || exit 1"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
+        # jmalloc/echo-server does not support HTTP health checks and does not include wget/curl.
+        # We omit the health check and rely on a custom wait step in the workflow.
         ports:
           - 8080:8080
 
@@ -300,9 +297,16 @@ jobs:
     - name: Wait for WebSocket echo service
       run: |
         echo "Waiting for WebSocket echo service to be ready..."
-        # Wait for WebSocket echo server with timeout, fail if not ready
-        timeout 30 bash -c 'until wget --spider -q http://localhost:8080/; do sleep 1; done'
-        echo "✅ WebSocket echo service is ready."
+        # Wait for the TCP port to be open (WebSocket server ready)
+        for i in {1..30}; do
+          if nc -z localhost 8080; then
+            echo "✅ WebSocket echo service is ready."
+            exit 0
+          fi
+          sleep 1
+        done
+        echo "❌ WebSocket echo service did not become ready in time."
+        exit 1
 
     - name: Run advanced integration tests
       run: |
