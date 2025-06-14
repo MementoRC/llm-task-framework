@@ -364,9 +364,8 @@ class TestDataProcessingBenchmarks:
 
             return processed_count
 
-        result = benchmark(process_large_dataset)
-        result_typed: int = result  # result should be int
-        assert result_typed > 0
+        result: int = benchmark(process_large_dataset)
+        assert result > 0
 
 
 # Performance thresholds and markers
@@ -412,8 +411,8 @@ class TestPerformanceThresholds:
             finally:
                 os.unlink(temp_path)
 
-        result = benchmark(quick_config_validation)
-        assert bool(result) is True
+        result: bool = benchmark(quick_config_validation)
+        assert result is True
 
 
 if __name__ == "__main__":

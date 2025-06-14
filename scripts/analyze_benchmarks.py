@@ -1,4 +1,5 @@
 import argparse
+from typing import Any
 
 from llm_task_framework.reporting.benchmark_analyzer import BenchmarkAnalyzer
 from llm_task_framework.reporting.benchmark_reporter import BenchmarkReporter
@@ -23,16 +24,16 @@ def main() -> None:
         default=0.1,
         help="Regression threshold (percentage).",
     )
-    args = parser.parse_args()
+    args: argparse.Namespace = parser.parse_args()
 
     analyzer = BenchmarkAnalyzer(regression_threshold=args.regression_threshold)
     reporter = BenchmarkReporter()
 
-    baseline_data = analyzer.load_benchmark_data(args.baseline)
-    current_data = analyzer.load_benchmark_data(args.current)
+    baseline_data: list[dict[str, Any]] = analyzer.load_benchmark_data(args.baseline)
+    current_data: list[dict[str, Any]] = analyzer.load_benchmark_data(args.current)
 
-    analysis_results = analyzer.analyze_results(baseline_data, current_data)
-    report = reporter.generate_report(analysis_results)
+    analysis_results: dict[str, Any] = analyzer.analyze_results(baseline_data, current_data)
+    report: str = reporter.generate_report(analysis_results)
 
     print(report)
 
