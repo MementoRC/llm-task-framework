@@ -463,6 +463,28 @@ jobs:
         path: benchmark.json
         retention-days: 30
 
+    - name: Analyze benchmark results
+      run: |
+        echo "Analyzing benchmark results..."
+        # Use a default baseline if one doesn't exist
+        BASELINE_FILE="benchmark_baseline.json"
+        if [ ! -f "$BASELINE_FILE" ]; then
+          echo "No baseline found, creating an empty baseline file"
+          echo '{"benchmarks": []}' > "$BASELINE_FILE"
+        fi
+        python scripts/analyze_benchmarks.py --baseline benchmark_baseline.json --current benchmark.json --regression-threshold 0.1 > benchmark_report.md
+
+    - name: Post benchmark results to PR
+      if: github.event_name == 'pull_request'
+      run: |
+        echo "Posting benchmark results to PR..."
+        python scripts/post_benchmark_comment.py --report benchmark_report.md --repo ${{ github.repository }} --pr ${{ github.event.pull_request.number }} --github-token ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Store benchmark results for future comparison
+      run: |
+        echo "Storing benchmark results for future comparison..."
+        cp benchmark.json benchmark_baseline.json
+
   # Documentation build check
   docs:
     name: Documentation
