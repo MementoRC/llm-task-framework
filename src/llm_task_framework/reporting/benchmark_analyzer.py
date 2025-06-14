@@ -16,7 +16,9 @@ class BenchmarkAnalyzer:
         """
         self.regression_threshold = regression_threshold
 
-    def analyze_results(self, baseline_data: list[dict[str, Any]], current_data: list[dict[str, Any]]) -> dict[str, Any]:
+    def analyze_results(
+        self, baseline_data: list[dict[str, Any]], current_data: list[dict[str, Any]]
+    ) -> dict[str, Any]:
         """
         Analyzes benchmark results and detects regressions.
 
@@ -43,12 +45,14 @@ class BenchmarkAnalyzer:
                 percentage_change = (current_mean - baseline_mean) / baseline_mean
 
                 if abs(percentage_change) > self.regression_threshold:
-                    regressions.append({
-                        "name": name,
-                        "percentage_change": percentage_change,
-                        "baseline_mean": baseline_mean,
-                        "current_mean": current_mean,
-                    })
+                    regressions.append(
+                        {
+                            "name": name,
+                            "percentage_change": percentage_change,
+                            "baseline_mean": baseline_mean,
+                            "current_mean": current_mean,
+                        }
+                    )
 
                 analysis[name] = {
                     "baseline": baseline_mean,
@@ -78,5 +82,5 @@ class BenchmarkAnalyzer:
             A list of benchmark results.
         """
         with open(json_file) as f:
-            data = json.load(f)
+            data: dict[str, list[dict[str, Any]]] = json.load(f)
         return data["benchmarks"]

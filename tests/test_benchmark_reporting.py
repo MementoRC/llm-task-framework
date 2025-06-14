@@ -61,12 +61,30 @@ def test_benchmark_reporter_generates_report():
     """
     analysis_results: dict[str, Any] = {
         "analysis": {
-            "test_benchmark_1": {"baseline": 1.0, "current": 1.2, "percentage_change": 0.2},
-            "test_benchmark_2": {"baseline": 2.0, "current": 2.5, "percentage_change": 0.25},
+            "test_benchmark_1": {
+                "baseline": 1.0,
+                "current": 1.2,
+                "percentage_change": 0.2,
+            },
+            "test_benchmark_2": {
+                "baseline": 2.0,
+                "current": 2.5,
+                "percentage_change": 0.25,
+            },
         },
         "regressions": [
-            {"name": "test_benchmark_1", "percentage_change": 0.2, "baseline_mean": 1.0, "current_mean": 1.2},
-            {"name": "test_benchmark_2", "percentage_change": 0.25, "baseline_mean": 2.0, "current_mean": 2.5},
+            {
+                "name": "test_benchmark_1",
+                "percentage_change": 0.2,
+                "baseline_mean": 1.0,
+                "current_mean": 1.2,
+            },
+            {
+                "name": "test_benchmark_2",
+                "percentage_change": 0.25,
+                "baseline_mean": 2.0,
+                "current_mean": 2.5,
+            },
         ],
     }
 
@@ -101,4 +119,5 @@ def test_benchmark_analyzer_loads_data():
 
     # Clean up the temporary file
     import os
+
     os.unlink(temp_file)

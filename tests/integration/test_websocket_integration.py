@@ -22,14 +22,14 @@ try:
     WEBSOCKETS_AVAILABLE = True
 except ImportError:
     WEBSOCKETS_AVAILABLE = False
-    websockets = None  # type: ignore[assignment]
-    WebSocketClientProtocol = Any  # type: ignore[misc, assignment]
-    ConnectionClosed = Exception  # type: ignore[assignment]
-    WebSocketException = Exception  # type: ignore[assignment]
+    websockets = None
+    WebSocketClientProtocol = Any
+    ConnectionClosed = Exception
+    WebSocketException = Exception
 
 
 @pytest.fixture(scope="function")
-async def websocket_client() -> AsyncGenerator[WebSocketClientProtocol, None]:
+async def websocket_client() -> AsyncGenerator[WebSocketClientProtocol | None, None]:
     """Provide a WebSocket client for testing.
 
     Skips tests if WebSocket library is not available or connection fails.

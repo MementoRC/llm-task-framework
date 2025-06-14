@@ -4,14 +4,22 @@ import json
 import requests
 
 
-def main():
+def main() -> None:
     """
     Posts benchmark results as a comment to a GitHub Pull Request.
     """
-    parser = argparse.ArgumentParser(description="Post benchmark results as a comment to a GitHub Pull Request.")
-    parser.add_argument("--report", required=True, help="Path to the benchmark report file.")
-    parser.add_argument("--repo", required=True, help="The GitHub repository (owner/repo).")
-    parser.add_argument("--pr", required=True, type=int, help="The Pull Request number.")
+    parser = argparse.ArgumentParser(
+        description="Post benchmark results as a comment to a GitHub Pull Request."
+    )
+    parser.add_argument(
+        "--report", required=True, help="Path to the benchmark report file."
+    )
+    parser.add_argument(
+        "--repo", required=True, help="The GitHub repository (owner/repo)."
+    )
+    parser.add_argument(
+        "--pr", required=True, type=int, help="The Pull Request number."
+    )
     parser.add_argument("--github-token", required=True, help="GitHub API token.")
     args = parser.parse_args()
 
@@ -31,13 +39,15 @@ def main():
     }
 
     # Make the API request to create the comment
-    response = requests.post(api_url, headers=headers, data=json.dumps(payload))
+    response = requests.post(api_url, headers=headers, data=json.dumps(payload), timeout=30)
 
     # Check if the request was successful
     if response.status_code == 201:
         print("✅ Benchmark report posted as a comment to the PR.")
     else:
-        print(f"❌ Failed to post comment. Status code: {response.status_code}, Response: {response.text}")
+        print(
+            f"❌ Failed to post comment. Status code: {response.status_code}, Response: {response.text}"
+        )
 
 
 if __name__ == "__main__":

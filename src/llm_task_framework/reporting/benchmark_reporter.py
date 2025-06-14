@@ -30,7 +30,9 @@ class BenchmarkReporter:
 
             baseline_str = f"{baseline:.6f}" if baseline is not None else "N/A"
             current_str = f"{current:.6f}"
-            percentage_change_str = f"{percentage_change:.2%}" if percentage_change is not None else "N/A"
+            percentage_change_str = (
+                f"{percentage_change:.2%}" if percentage_change is not None else "N/A"
+            )
 
             report += f"| {name} | {baseline_str} | {current_str} | {percentage_change_str} |\n"
 

@@ -385,14 +385,9 @@ class TestPerformanceThresholds:
             return llm_task_framework
 
         result = benchmark(import_framework)
-        # Properly cast the result to Any to avoid mypy issues
-        from typing import Any
-
-        result_typed: Any = result
-
         # Check that the benchmark time is under threshold
         # Note: benchmark.stats will contain timing information
-        assert result_typed is not None
+        assert result is not None
 
     @pytest.mark.benchmark
     def test_config_validation_under_threshold(self, benchmark):
@@ -418,10 +413,7 @@ class TestPerformanceThresholds:
                 os.unlink(temp_path)
 
         result = benchmark(quick_config_validation)
-        from typing import Any
-
-        result_typed: Any = result
-        assert bool(result_typed) is True
+        assert bool(result) is True
 
 
 if __name__ == "__main__":
