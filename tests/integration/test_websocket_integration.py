@@ -78,11 +78,18 @@ async def websocket_client() -> AsyncGenerator[WebSocketClientProtocol | None, N
     try:
         yield client
     finally:
-        if client and not client.closed:
+        if client:
             from contextlib import suppress
+            from websockets.protocol import State
 
-            with suppress(ConnectionClosed, RuntimeError):
-                await client.close()
+            # Only try to close if connection is still open
+            if hasattr(client, "state") and client.state == State.OPEN:
+                with suppress(ConnectionClosed, RuntimeError):
+                    await client.close()
+            elif not hasattr(client, "state"):
+                # Fallback: try to close anyway, suppress errors
+                with suppress(ConnectionClosed, RuntimeError, AttributeError):
+                    await client.close()
 
 
 @pytest.mark.integration

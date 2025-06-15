@@ -267,9 +267,9 @@ jobs:
           - 6379:6379
 
       websocket-echo:
-        image: jmalloc/echo-server:latest
-        # jmalloc/echo-server does not support HTTP health checks and does not include wget/curl.
-        # We omit the health check and rely on a custom wait step in the workflow.
+        image: solsson/websocket-echo-server:latest
+        # Dedicated WebSocket echo server that echoes messages back
+        # Available at ws://localhost:8080/
         ports:
           - 8080:8080
 
