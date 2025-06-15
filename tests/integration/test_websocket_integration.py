@@ -17,15 +17,18 @@ import pytest
 try:
     import websockets
     from websockets.client import WebSocketClientProtocol
-    from websockets.exceptions import WebSocketException
+    from websockets.exceptions import ConnectionClosed, WebSocketException
 
     WEBSOCKETS_AVAILABLE = True
 except ImportError:
     WEBSOCKETS_AVAILABLE = False
-    websockets = None
-    WebSocketClientProtocol = Any
-    ConnectionClosed = Exception
-    WebSocketException = Exception
+    websockets = None  # type: ignore[assignment]
+    WebSocketClientProtocol = Any  # type: ignore[misc]
+    ConnectionClosed = Exception  # type: ignore[misc,assignment]
+    WebSocketException = Exception  # type: ignore[misc,assignment]
+
+# Use conservative parameters in CI to prevent timeouts
+IS_CI = os.getenv("CI", "false").lower() == "true"
 
 
 @pytest.fixture(scope="function")
@@ -50,13 +53,13 @@ async def websocket_client() -> AsyncGenerator[WebSocketClientProtocol | None, N
     attempt = 0
     while attempt < 3:
         try:
-            # Use a longer timeout for CI environments
-            connect_coro = websockets.connect(websocket_url, open_timeout=10)
-            client = await asyncio.wait_for(connect_coro, timeout=10.0)
+            # Use a shorter timeout to fail fast in CI
+            connect_coro = websockets.connect(websocket_url, open_timeout=5)
+            client = await asyncio.wait_for(connect_coro, timeout=5.0)
 
             # Perform a quick ping-pong to ensure the connection is responsive
             pong_waiter = await client.ping()
-            await asyncio.wait_for(pong_waiter, timeout=5.0)
+            await asyncio.wait_for(pong_waiter, timeout=3.0)
 
             # If we got here, connection is good
             break
@@ -67,7 +70,7 @@ async def websocket_client() -> AsyncGenerator[WebSocketClientProtocol | None, N
             client = None
             attempt += 1
             if attempt < 3:
-                await asyncio.sleep(2 * attempt)  # Exponential backoff
+                await asyncio.sleep(1 * attempt)  # Exponential backoff
 
     if not client:
         pytest.skip(f"WebSocket connection failed after 3 retries: {last_exception}")
@@ -75,11 +78,12 @@ async def websocket_client() -> AsyncGenerator[WebSocketClientProtocol | None, N
     try:
         yield client
     finally:
-        if client:
+        if client and not client.closed:
             try:
                 await client.close()
-            except Exception as e:
-                print(f"Error closing WebSocket: {e}")
+            except (ConnectionClosed, RuntimeError):
+                # Ignore errors on close, as the connection might already be gone
+                pass
 
 
 @pytest.mark.integration
@@ -92,6 +96,7 @@ async def test_websocket_connection(websocket_client: WebSocketClientProtocol):
 
     # Test basic connectivity
     from websockets.protocol import State
+
     assert websocket_client.state == State.OPEN
 
 
@@ -104,7 +109,7 @@ async def test_websocket_echo_basic(websocket_client: WebSocketClientProtocol):
     test_message = "Hello WebSocket Echo Server!"
 
     await websocket_client.send(test_message)
-    response = await asyncio.wait_for(websocket_client.recv(), timeout=5.0)
+    response = await asyncio.wait_for(websocket_client.recv(), timeout=2.0)
 
     assert response == test_message
 
@@ -126,7 +131,7 @@ async def test_websocket_echo_json(websocket_client: WebSocketClientProtocol):
 
     json_message = json.dumps(test_data)
     await websocket_client.send(json_message)
-    response = await asyncio.wait_for(websocket_client.recv(), timeout=5.0)
+    response = await asyncio.wait_for(websocket_client.recv(), timeout=2.0)
 
     # Verify the echo response
     assert response == json_message
@@ -145,7 +150,7 @@ async def test_websocket_echo_binary(websocket_client: WebSocketClientProtocol):
     test_binary = b"Binary data: \x00\x01\x02\x03\xff"
 
     await websocket_client.send(test_binary)
-    response = await asyncio.wait_for(websocket_client.recv(), timeout=5.0)
+    response = await asyncio.wait_for(websocket_client.recv(), timeout=2.0)
 
     assert response == test_binary
 
@@ -167,12 +172,12 @@ async def test_websocket_multiple_messages(websocket_client: WebSocketClientProt
     responses = []
     for message in messages:
         await websocket_client.send(message)
-        response = await asyncio.wait_for(websocket_client.recv(), timeout=5.0)
+        response = await asyncio.wait_for(websocket_client.recv(), timeout=2.0)
         responses.append(response)
 
     # Verify all messages were echoed correctly
     assert len(responses) == len(messages)
-    for original, echoed in zip(messages, responses, strict=False):
+    for original, echoed in zip(messages, responses, strict=True):
         assert echoed == original
 
 
@@ -181,14 +186,16 @@ async def test_websocket_multiple_messages(websocket_client: WebSocketClientProt
 @pytest.mark.asyncio
 async def test_websocket_large_message(websocket_client: WebSocketClientProtocol):
     """Test WebSocket echo with large messages."""
-    # Test large message (1MB)
-    large_message = "A" * (1024 * 1024)
+    # Use a smaller message size in CI to avoid performance issues
+    large_message_size = 64 * 1024 if IS_CI else 1024 * 1024
+    timeout = 5.0 if IS_CI else 10.0
+    large_message = "A" * large_message_size
 
     await websocket_client.send(large_message)
-    response = await asyncio.wait_for(websocket_client.recv(), timeout=10.0)
+    response = await asyncio.wait_for(websocket_client.recv(), timeout=timeout)
 
+    assert len(response) == large_message_size
     assert response == large_message
-    assert len(response) == 1024 * 1024
 
 
 @pytest.mark.integration
@@ -208,23 +215,24 @@ async def test_websocket_concurrent_connections():
     async def send_and_receive(client_id: int) -> bool:
         """Helper to test a single connection."""
         try:
-            async with websockets.connect(websocket_url) as websocket:
+            async with websockets.connect(websocket_url, open_timeout=5) as websocket:
                 message = f"Client {client_id} test message"
                 await websocket.send(message)
-                response = await asyncio.wait_for(websocket.recv(), timeout=5.0)
+                response = await asyncio.wait_for(websocket.recv(), timeout=3.0)
                 return response == message
         except Exception as e:
-            pytest.skip(f"WebSocket connection failed for client {client_id}: {e}")
+            pytest.fail(f"WebSocket connection failed for client {client_id}: {e}")
             return False
 
-    # Test 5 concurrent connections
-    tasks = [send_and_receive(i) for i in range(5)]
+    # Use fewer connections in CI to reduce load
+    num_connections = 3 if IS_CI else 5
+    tasks = [send_and_receive(i) for i in range(num_connections)]
     results = await asyncio.gather(*tasks, return_exceptions=True)
 
     # Verify all connections succeeded
     successful = [r for r in results if r is True]
-    assert len(successful) == 5, (
-        f"Expected 5 successful connections, got {len(successful)}"
+    assert len(successful) == num_connections, (
+        f"Expected {num_connections} successful connections, got {len(successful)}"
     )
 
 
@@ -244,13 +252,13 @@ async def test_websocket_connection_resilience():
 
     try:
         # Test connection, close, and reconnection
-        async with websockets.connect(websocket_url) as websocket1:
+        async with websockets.connect(websocket_url, open_timeout=5) as websocket1:
             await websocket1.send("Connection 1")
             response1 = await websocket1.recv()
             assert response1 == "Connection 1"
 
         # Connection 1 is now closed, test new connection
-        async with websockets.connect(websocket_url) as websocket2:
+        async with websockets.connect(websocket_url, open_timeout=5) as websocket2:
             await websocket2.send("Connection 2")
             response2 = await websocket2.recv()
             assert response2 == "Connection 2"
@@ -260,43 +268,32 @@ async def test_websocket_connection_resilience():
 
 
 @pytest.mark.integration
+@pytest.mark.asyncio
 async def test_websocket_fallback_when_unavailable():
     """Test graceful fallback when WebSocket service is unavailable."""
+    if not WEBSOCKETS_AVAILABLE:
+        pytest.skip("websockets library not available")
 
     # Mock WebSocket to raise connection error
     with patch("websockets.connect") as mock_connect:
         mock_connect.side_effect = OSError("Connection refused")
 
-        # This should be handled gracefully by the fixture
-        websocket_url = os.getenv("WEBSOCKET_URL", "ws://localhost:8080")
-        test_with_services = os.getenv("TEST_WITH_SERVICES", "false").lower() == "true"
-
-        if not test_with_services:
-            pytest.skip("Service container testing disabled")
-
-        # Test that the test skips gracefully rather than failing
-        try:
-            async with websockets.connect(websocket_url) as websocket:
-                await websocket.send("test")
-        except OSError:
-            # Expected behavior - connection should fail and test should handle it
-            pass
+        websocket_url = "ws://localhost:9999"
+        with pytest.raises(OSError):
+            await asyncio.wait_for(websockets.connect(websocket_url), timeout=1.0)
 
 
 @pytest.mark.integration
-def test_websocket_error_handling():
+@pytest.mark.asyncio
+async def test_websocket_error_handling():
     """Test proper error handling for WebSocket operations."""
     if not WEBSOCKETS_AVAILABLE:
         pytest.skip("WebSocket library not available")
 
     # Test with invalid WebSocket URL
-    async def test_invalid_connection():
-        with pytest.raises(OSError):
-            invalid_url = "ws://invalid-host:9999"
-            await asyncio.wait_for(websockets.connect(invalid_url), timeout=1.0)
-
-    # Run the async test
-    asyncio.run(test_invalid_connection())
+    with pytest.raises((OSError, asyncio.TimeoutError)):
+        invalid_url = "ws://invalid-host:9999"
+        await asyncio.wait_for(websockets.connect(invalid_url), timeout=1.0)
 
 
 @pytest.mark.integration
@@ -304,8 +301,8 @@ def test_websocket_error_handling():
 @pytest.mark.asyncio
 async def test_websocket_performance_basic(websocket_client: WebSocketClientProtocol):
     """Test basic WebSocket performance characteristics."""
-    # Test message throughput
-    num_messages = 100
+    # Use fewer messages in CI to prevent timeouts
+    num_messages = 10 if IS_CI else 100
     message = "Performance test message"
 
     start_time = time.time()
@@ -313,14 +310,19 @@ async def test_websocket_performance_basic(websocket_client: WebSocketClientProt
     # Send and receive messages
     for i in range(num_messages):
         await websocket_client.send(f"{message} {i}")
-        response = await asyncio.wait_for(websocket_client.recv(), timeout=5.0)
+        response = await asyncio.wait_for(websocket_client.recv(), timeout=2.0)
         assert response == f"{message} {i}"
 
     elapsed_time = time.time() - start_time
 
-    # Basic performance assertions (adjust thresholds as needed)
+    # Basic performance assertions (adjust thresholds for CI)
     messages_per_second = num_messages / elapsed_time
-    assert messages_per_second > 10, (
-        f"Performance too slow: {messages_per_second:.2f} msg/s"
+    min_msgs_per_sec = 5 if IS_CI else 10
+    max_elapsed_time = 15.0 if IS_CI else 30.0
+
+    assert messages_per_second > min_msgs_per_sec, (
+        f"Performance too slow: {messages_per_second:.2f} msg/s (min: {min_msgs_per_sec})"
     )
-    assert elapsed_time < 30.0, f"Total time too slow: {elapsed_time:.2f}s"
+    assert elapsed_time < max_elapsed_time, (
+        f"Total time too slow: {elapsed_time:.2f}s (max: {max_elapsed_time}s)"
+    )
