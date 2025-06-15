@@ -34,6 +34,34 @@ jobs:
         pixi-version: v0.41.4
         cache: true
 
+    - name: Cache Python packages
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cache/pip
+          ~/.pixi/cache
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/pyproject.toml', '**/pixi.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+
+    - name: Cache pre-commit hooks
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/pre-commit
+        key: ${{ runner.os }}-pre-commit-${{ hashFiles('.pre-commit-config.yaml') }}
+        restore-keys: |
+          ${{ runner.os }}-pre-commit-
+
+    - name: Cache test fixtures
+      uses: actions/cache@v4
+      with:
+        path: |
+          .pytest_cache
+          tests/fixtures/data
+        key: ${{ runner.os }}-test-cache-${{ hashFiles('tests/**/*.py') }}
+        restore-keys: |
+          ${{ runner.os }}-test-cache-
+
     - name: Check code formatting
       run: pixi run -e dev format-check
 
@@ -72,6 +100,31 @@ jobs:
       with:
         pixi-version: v0.41.4
         cache: true
+
+    - name: Cache Python packages
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cache/pip
+          ~/.pixi/cache
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/pyproject.toml', '**/pixi.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+
+    - name: Cache security scan databases
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.local/share/bandit
+          ~/.cache/safety
+          ~/.cache/pip-audit
+        key: ${{ runner.os }}-security-db-${{ steps.date.outputs.week }}
+        restore-keys: |
+          ${{ runner.os }}-security-db-
+
+    - name: Set cache date
+      id: date
+      run: echo "week=$(date +'%Y-W%V')" >> $GITHUB_OUTPUT
 
     - name: Run security checks
       run: pixi run -e security security-all
