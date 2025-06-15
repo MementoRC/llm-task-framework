@@ -17,7 +17,7 @@ import pytest
 try:
     import websockets
     from websockets.client import WebSocketClientProtocol
-    from websockets.exceptions import ConnectionClosed, WebSocketException
+    from websockets.exceptions import WebSocketException
 
     WEBSOCKETS_AVAILABLE = True
 except ImportError:
@@ -69,9 +69,7 @@ async def websocket_client() -> AsyncGenerator[WebSocketClientProtocol | None, N
             if attempt < 3:
                 await asyncio.sleep(2 * attempt)  # Exponential backoff
         except Exception as e:
-            last_exception = e
-            print(f"Unexpected exception: {e}")
-            break
+            pytest.skip(f"WebSocket connection failed after 3 retries: {e}")
 
     if not client:
         pytest.skip(f"WebSocket connection failed after 3 retries: {last_exception}")
