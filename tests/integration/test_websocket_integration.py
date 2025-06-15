@@ -68,8 +68,6 @@ async def websocket_client() -> AsyncGenerator[WebSocketClientProtocol | None, N
             attempt += 1
             if attempt < 3:
                 await asyncio.sleep(2 * attempt)  # Exponential backoff
-        except Exception as e:
-            pytest.skip(f"WebSocket connection failed after 3 retries: {e}")
 
     if not client:
         pytest.skip(f"WebSocket connection failed after 3 retries: {last_exception}")
