@@ -164,7 +164,7 @@ jobs:
         fi
 
   test:
-    name: Test Python ${{ matrix.python-version }} on ${{ matrix.os }}
+    name: Test Python ${{ matrix.python-version }} on ${{ matrix.os }} [${{ matrix.test-category }}]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 20
     needs: [detect-changes]
@@ -173,24 +173,35 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # Ubuntu: Full Python version coverage (primary development platform)
+          # Ubuntu: Full coverage (all markers except slow/benchmark/mcp/integration for unit, then integration separately)
           - os: ubuntu-latest
             python-version: "3.10"
+            test-category: "full"
+            pytest-marker: "not slow and not benchmark and not mcp"
           - os: ubuntu-latest
             python-version: "3.11"
+            test-category: "full"
+            pytest-marker: "not slow and not benchmark and not mcp"
           - os: ubuntu-latest
             python-version: "3.12"
+            test-category: "full"
+            pytest-marker: "not slow and not benchmark and not mcp"
 
-          # macOS: Python 3.12+ only (aligned with external patterns)
+          # macOS: Core tests (no slow, no network, no integration, no mcp, no benchmark)
           - os: macos-latest
             python-version: "3.12"
+            test-category: "core"
+            pytest-marker: "not slow and not network and not integration and not mcp and not benchmark"
 
-          # Windows: Core versions with performance optimizations
+          # Windows: Essential tests (no slow, no network, no integration, no mcp, no benchmark, no e2e, no load)
           - os: windows-latest
             python-version: "3.10"
-            test-marker: "not slow"  # Skip slow tests on Windows 3.10
+            test-category: "essential"
+            pytest-marker: "not slow and not network and not integration and not mcp and not benchmark and not e2e and not load"
           - os: windows-latest
             python-version: "3.12"
+            test-category: "essential"
+            pytest-marker: "not slow and not network and not integration and not mcp and not benchmark and not e2e and not load"
 
     steps:
     - name: Checkout code
@@ -204,29 +215,18 @@ jobs:
 
     # Removed explicit editable install step; Pixi handles editable install automatically via environment setup.
 
-    - name: Run unit tests with coverage
+    - name: Run optimized tests with coverage
       shell: bash
       run: |
-        # Run unit tests first to avoid URL patching pollution from integration tests
-        # Exclude integration and mcp tests from main test matrix to prevent pollution
-        # Use platform-specific optimizations for test execution
-        if [[ "${{ matrix.test-marker }}" != "" ]]; then
-          echo "Running optimized unit tests for ${{ matrix.os }} Python ${{ matrix.python-version }}..."
-          pixi run -e dev pytest tests -m "not integration and not mcp and not benchmark and ${{ matrix.test-marker }}" --cov=llm_task_framework --cov-report=xml:coverage.xml --cov-report=term --maxfail=5 -x
-        else
-          echo "Running standard unit tests for ${{ matrix.os }} Python ${{ matrix.python-version }}..."
-          pixi run -e dev pytest tests -m "not integration and not mcp and not benchmark" --cov=llm_task_framework --cov-report=xml:coverage.xml --cov-report=term
-        fi
+        echo "Running ${{ matrix.test-category }} tests for ${{ matrix.os }} Python ${{ matrix.python-version }}..."
+        pixi run -e dev pytest tests -m "${{ matrix.pytest-marker }}" --cov=llm_task_framework --cov-report=xml:coverage.xml --cov-report=term
       env:
         # Disable LLM tests in CI unless API keys provided
         SKIP_LLM_TESTS: ${{ !secrets.ANTHROPIC_API_KEY && !secrets.OPENAI_API_KEY }}
 
-    - name: Run basic integration tests (cross-platform)
+    - name: Run basic integration tests (cross-platform, Ubuntu/macOS only)
       shell: bash
       run: |
-        # Run integration tests separately to prevent URL patching pollution
-        # Only run basic integration tests that don't require external services
-        # Skip on platforms where integration tests might be flaky
         if [[ "${{ matrix.os }}" == "ubuntu-latest" ]] || [[ "${{ matrix.os }}" == "macos-latest" ]]; then
           echo "Running cross-platform integration tests..."
           pixi run -e dev pytest tests -m "integration and not mcp and not benchmark" --cov=llm_task_framework --cov-append || [ $? -eq 5 ]
@@ -234,7 +234,6 @@ jobs:
           echo "Skipping integration tests on ${{ matrix.os }} for performance optimization"
         fi
       env:
-        # Disable LLM tests in CI unless API keys provided
         SKIP_LLM_TESTS: ${{ !secrets.ANTHROPIC_API_KEY && !secrets.OPENAI_API_KEY }}
 
     - name: Upload coverage to Codecov
