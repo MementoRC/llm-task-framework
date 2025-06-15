@@ -167,15 +167,17 @@ class TestBenchmarkAnalyzer:
         analyzer = BenchmarkAnalyzer([])
         # Missing file
         assert analyzer.load_benchmark_data("non_existent_file.json") == []
-        
+
         # Empty file - create a proper temporary file for cross-platform compatibility
         empty_data = {"benchmarks": []}
         temp_file = create_temp_json_file(empty_data)
         temp_files.append(temp_file)
-        
+
         assert analyzer.load_benchmark_data(temp_file) == []
 
-    @pytest.mark.skipif(os.name == "nt", reason="Windows file permission handling differs")
+    @pytest.mark.skipif(
+        os.name == "nt", reason="Windows file permission handling differs"
+    )
     def test_load_invalid_file_permissions(self):
         """Test handling of files with permission issues (Unix-like systems only)."""
         analyzer = BenchmarkAnalyzer([])

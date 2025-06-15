@@ -39,7 +39,9 @@ def main() -> None:
     }
 
     # Make the API request to create the comment
-    response: requests.Response = requests.post(api_url, headers=headers, data=json.dumps(payload), timeout=30)
+    response: requests.Response = requests.post(
+        api_url, headers=headers, data=json.dumps(payload), timeout=30
+    )
 
     # Check if the request was successful
     if response.status_code == 201:

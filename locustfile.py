@@ -30,7 +30,13 @@ import tempfile
 import time
 from typing import Any
 
-from locust import HttpUser, TaskSet, between, events, task  # type: ignore[import-not-found]
+from locust import (  # type: ignore[import-not-found]
+    HttpUser,
+    TaskSet,
+    between,
+    events,
+    task,
+)
 from locust.env import Environment  # type: ignore[import-not-found]
 
 
