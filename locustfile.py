@@ -25,7 +25,7 @@ Environment Variables:
 
 import json
 import os
-import subprocess
+import subprocess  # nosec B404
 import tempfile
 import time
 from typing import Any
@@ -66,7 +66,7 @@ class FrameworkTaskSet(TaskSet):
         """Test CLI help command performance."""
         start_time = time.time()
         try:
-            result = subprocess.run(
+            result: subprocess.CompletedProcess[str] = subprocess.run(
                 ["python", "-m", "llm_task_framework.cli.main", "--help"],
                 capture_output=True,
                 text=True,
@@ -118,7 +118,7 @@ class FrameworkTaskSet(TaskSet):
         """Test framework import performance."""
         start_time = time.time()
         try:
-            result = subprocess.run(
+            result: subprocess.CompletedProcess[str] = subprocess.run(
                 ["python", "-c", "import llm_task_framework; print('OK')"],
                 capture_output=True,
                 text=True,
@@ -182,7 +182,7 @@ else:
     print('CONFIG_MISSING')
 """
 
-            result = subprocess.run(
+            result: subprocess.CompletedProcess[str] = subprocess.run(
                 ["python", "-c", validation_script],  # nosec B603 B607
                 capture_output=True,
                 text=True,
@@ -286,7 +286,7 @@ time.sleep(0.05)
 print("MCP_PROTOCOL_OK")
 """
 
-            result = subprocess.run(
+            result: subprocess.CompletedProcess[str] = subprocess.run(
                 ["python", "-c", mcp_test_script],  # nosec B603 B607
                 capture_output=True,
                 text=True,
@@ -358,7 +358,7 @@ else:
     print("CONCURRENT_FAILED")
 """
 
-            result = subprocess.run(
+            result: subprocess.CompletedProcess[str] = subprocess.run(
                 ["python", "-c", concurrent_script],  # nosec B603 B607
                 capture_output=True,
                 text=True,

@@ -1,6 +1,7 @@
 """Main CLI entry point for LLM Task Framework."""
 
 import click
+from click import Context
 
 from llm_task_framework.__version__ import __version__
 
@@ -8,7 +9,7 @@ from llm_task_framework.__version__ import __version__
 @click.group()
 @click.version_option(version=__version__)
 @click.pass_context
-def main(ctx: click.Context) -> None:
+def main(ctx: Context) -> None:
     """LLM Task Framework - Generic framework for building LLM-powered task execution systems."""
     ctx.ensure_object(dict)
 

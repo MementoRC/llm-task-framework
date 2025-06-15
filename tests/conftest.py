@@ -4,6 +4,7 @@ import asyncio
 import contextlib
 import os
 import tempfile
+import time
 import warnings
 from collections.abc import AsyncGenerator, Generator
 from pathlib import Path
@@ -37,7 +38,7 @@ async def auto_cleanup_async_resources() -> AsyncGenerator[None, None]:
 
     # Cleanup any pending aiohttp sessions if aiohttp is available
     try:
-        import aiohttp  # type: ignore[import-not-found]
+        import aiohttp  # type: ignore[import-untyped]
 
         # Close any unclosed client sessions
         connector = getattr(aiohttp, "_connector", None)
@@ -168,6 +169,66 @@ def temp_project_dir() -> Generator[Path, None, None]:
     """
     with tempfile.TemporaryDirectory(prefix="llm_task_framework_test_") as temp_dir:
         yield Path(temp_dir)
+
+
+@pytest.fixture(scope="function")
+def redis_client() -> Generator[Any, None, None]:
+    """Provide a Redis client for integration tests.
+
+    Safely handles Redis connection with fallback strategies.
+    Skips tests if Redis is not available.
+    """
+    redis = None
+    try:
+        import redis
+    except ImportError:
+        pytest.skip("redis library not installed")
+
+    redis_url = os.environ.get("REDIS_URL", "redis://localhost:6379")
+    test_with_services = os.environ.get("TEST_WITH_SERVICES", "false").lower() == "true"
+
+    if not test_with_services:
+        pytest.skip(
+            "Service container testing disabled (TEST_WITH_SERVICES is not 'true')"
+        )
+
+    client = None
+    last_exception = None
+    try:
+        # Create Redis client with increased timeout for CI environments
+        client = redis.Redis.from_url(
+            redis_url, decode_responses=True, socket_connect_timeout=5, socket_timeout=5
+        )
+
+        # Test connection with retry logic for CI stability
+        for attempt in range(3):
+            try:
+                client.ping()
+                break  # Success
+            except (redis.ConnectionError, redis.TimeoutError) as e:
+                last_exception = e
+                if attempt == 2:
+                    raise
+                time.sleep(1 * (attempt + 1))  # Exponential backoff
+
+        # Use a test-specific database to avoid conflicts
+        client.select(15)
+        client.flushdb()  # Clear test database before test
+
+        yield client
+
+    except (redis.ConnectionError, redis.TimeoutError, ConnectionRefusedError) as e:
+        pytest.skip(f"Redis connection failed after retries: {last_exception or e}")
+
+    finally:
+        # Cleanup
+        if client:
+            try:
+                client.flushdb()  # Clear test data after test
+                client.close()
+            except Exception as e:
+                # Log cleanup errors but don't fail the test suite
+                warnings.warn(f"Redis cleanup failed: {e}", stacklevel=2)
 
 
 @pytest.fixture(scope="function")

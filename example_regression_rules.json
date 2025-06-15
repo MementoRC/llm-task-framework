@@ -1,0 +1,26 @@
+[
+  {
+    "metric": "mean",
+    "threshold_type": "percentage",
+    "threshold": 0.1,
+    "severity": "error"
+  },
+  {
+    "metric": "stddev",
+    "threshold_type": "percentage", 
+    "threshold": 0.5,
+    "severity": "warning"
+  },
+  {
+    "metric": "min",
+    "threshold_type": "percentage",
+    "threshold": 0.2,
+    "severity": "error"
+  },
+  {
+    "metric": "max",
+    "threshold_type": "absolute",
+    "threshold": 0.05,
+    "severity": "warning"
+  }
+]

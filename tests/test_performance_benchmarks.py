@@ -334,9 +334,7 @@ class TestDataProcessingBenchmarks:
             return len(parsed_data["tasks"])
 
         result = benchmark(json_operations)
-        from typing import Any
-
-        result_typed: Any = result
+        result_typed: int = result  # result should be int
         assert result_typed == 50
 
     @pytest.mark.benchmark
@@ -366,11 +364,8 @@ class TestDataProcessingBenchmarks:
 
             return processed_count
 
-        result = benchmark(process_large_dataset)
-        from typing import Any
-
-        result_typed: Any = result
-        assert result_typed > 0
+        result: int = benchmark(process_large_dataset)
+        assert result > 0
 
 
 # Performance thresholds and markers
@@ -389,14 +384,9 @@ class TestPerformanceThresholds:
             return llm_task_framework
 
         result = benchmark(import_framework)
-        # Properly cast the result to Any to avoid mypy issues
-        from typing import Any
-
-        result_typed: Any = result
-
         # Check that the benchmark time is under threshold
         # Note: benchmark.stats will contain timing information
-        assert result_typed is not None
+        assert result is not None
 
     @pytest.mark.benchmark
     def test_config_validation_under_threshold(self, benchmark):
@@ -421,11 +411,8 @@ class TestPerformanceThresholds:
             finally:
                 os.unlink(temp_path)
 
-        result = benchmark(quick_config_validation)
-        from typing import Any
-
-        result_typed: Any = result
-        assert bool(result_typed) is True
+        result: bool = benchmark(quick_config_validation)
+        assert result is True
 
 
 if __name__ == "__main__":
