@@ -267,11 +267,14 @@ jobs:
           - 6379:6379
 
       websocket-echo:
-        image: solsson/websocket-echo-server:latest
-        # Dedicated WebSocket echo server that echoes messages back
-        # Available at ws://localhost:8080/
+        image: mendhak/http-https-echo:31
+        # This image supports WebSocket echo functionality via /ws endpoint
+        # WebSocket endpoint available at ws://localhost:8080/ws
         ports:
           - 8080:8080
+        env:
+          HTTP_PORT: 8080
+          HTTPS_PORT: 8443
 
     steps:
     - name: Checkout code
@@ -320,7 +323,7 @@ jobs:
         OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         # Service container connection details
         REDIS_URL: redis://localhost:6379
-        WEBSOCKET_URL: ws://localhost:8080
+        WEBSOCKET_URL: ws://localhost:8080/ws
         TEST_WITH_SERVICES: true
 
     - name: Run MCP server tests (isolated)
