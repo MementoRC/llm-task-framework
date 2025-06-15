@@ -230,11 +230,11 @@ async def test_websocket_concurrent_connections():
 
     # Verify all connections succeeded
     successful = [r for r in results if r is True]
-    
+
     # If no connections succeeded, skip the test (service unavailable)
     if len(successful) == 0:
         pytest.skip("WebSocket service unavailable - all connections failed")
-        
+
     assert len(successful) == num_connections, (
         f"Expected {num_connections} successful connections, got {len(successful)}"
     )
