@@ -91,7 +91,8 @@ async def test_websocket_connection(websocket_client: WebSocketClientProtocol):
     await websocket_client.ping()
 
     # Test basic connectivity
-    assert websocket_client.closed is False
+    from websockets.protocol import State
+    assert websocket_client.state == State.OPEN
 
 
 @pytest.mark.integration
