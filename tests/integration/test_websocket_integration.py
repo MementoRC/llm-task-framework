@@ -80,6 +80,7 @@ async def websocket_client() -> AsyncGenerator[WebSocketClientProtocol | None, N
     finally:
         if client and not client.closed:
             from contextlib import suppress
+
             with suppress(ConnectionClosed, RuntimeError):
                 await client.close()
 
