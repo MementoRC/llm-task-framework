@@ -2,19 +2,113 @@ import json
 from typing import Any
 
 
-class BenchmarkAnalyzer:
-    """
-    Analyzes benchmark results and detects regressions.
-    """
+class RegressionDetector:
+    """Detects performance regressions based on configurable rules."""
 
-    def __init__(self, regression_threshold: float = 0.1):
+    def __init__(self, rules: list[dict[str, Any]]):
         """
-        Initializes the analyzer with a regression threshold.
+        Initializes the detector with a set of regression rules.
 
         Args:
-            regression_threshold: Percentage threshold for regression detection.
+            rules: A list of rule dictionaries. Each rule defines a metric,
+                   thresholds, and severity.
+                   Example:
+                   [
+                       {
+                           "metric": "mean",
+                           "threshold_type": "percentage",
+                           "threshold": 0.1,
+                           "severity": "error"
+                       },
+                       {
+                           "metric": "stddev",
+                           "threshold_type": "absolute",
+                           "threshold": 0.05,
+                           "severity": "warning"
+                       }
+                   ]
         """
-        self.regression_threshold = regression_threshold
+        self.rules = rules
+
+    def _get_metric(self, stats: dict[str, Any], metric: str) -> float | None:
+        """Safely gets a metric from the stats dictionary."""
+        # pytest-benchmark uses 'stddev' but we might want to call it 'std'
+        metric_map = {"std": "stddev"}
+        key = metric_map.get(metric, metric)
+        return stats.get(key)
+
+    def detect(
+        self, baseline_stats: dict[str, Any], current_stats: dict[str, Any]
+    ) -> list[dict[str, Any]]:
+        """
+        Detects regressions for a single benchmark result.
+
+        Args:
+            baseline_stats: The stats dictionary for the baseline benchmark.
+            current_stats: The stats dictionary for the current benchmark.
+
+        Returns:
+            A list of detected regressions for this benchmark.
+        """
+        regressions = []
+        for rule in self.rules:
+            metric = rule["metric"]
+            threshold_type = rule["threshold_type"]
+            threshold = rule["threshold"]
+            severity = rule.get("severity", "warning")
+
+            baseline_value = self._get_metric(baseline_stats, metric)
+            current_value = self._get_metric(current_stats, metric)
+
+            if baseline_value is None or current_value is None:
+                continue  # Cannot compare if a value is missing
+
+            # We only care about regressions (performance getting worse)
+            if current_value <= baseline_value:
+                continue
+
+            is_regression = False
+            change = 0.0
+
+            if threshold_type == "percentage":
+                if baseline_value == 0:
+                    continue  # Avoid division by zero
+                change = (current_value - baseline_value) / baseline_value
+                if change > threshold:
+                    is_regression = True
+            elif threshold_type == "absolute":
+                change = current_value - baseline_value
+                if change > threshold:
+                    is_regression = True
+
+            if is_regression:
+                regressions.append(
+                    {
+                        "metric": metric,
+                        "threshold_type": threshold_type,
+                        "threshold": threshold,
+                        "baseline_value": baseline_value,
+                        "current_value": current_value,
+                        "change": change,
+                        "severity": severity,
+                    }
+                )
+        return regressions
+
+
+class BenchmarkAnalyzer:
+    """
+    Analyzes benchmark results and detects regressions using a RegressionDetector.
+    """
+
+    def __init__(self, regression_rules: list[dict[str, Any]]):
+        """
+        Initializes the analyzer with regression rules.
+
+        Args:
+            regression_rules: A list of rule dictionaries for the RegressionDetector.
+        """
+        self.detector = RegressionDetector(rules=regression_rules)
 
     def analyze_results(
         self, baseline_data: list[dict[str, Any]], current_data: list[dict[str, Any]]
@@ -29,46 +123,35 @@ class BenchmarkAnalyzer:
         Returns:
             A dictionary containing analysis results, including detected regressions.
         """
-        analysis = {}
-        regressions = []
+        analysis: dict[str, Any] = {}
+        all_regressions: list[dict[str, Any]] = []
 
-        # Index baseline data by benchmark name
         baseline_index = {item["name"]: item for item in baseline_data}
 
         for current_result in current_data:
             name = current_result["name"]
+            current_stats = current_result["stats"]
+            analysis[name] = {
+                "current_stats": current_stats,
+                "baseline_stats": None,
+                "regressions": [],
+            }
+
             if name in baseline_index:
                 baseline_result = baseline_index[name]
-                # Compare mean execution times
-                baseline_mean = baseline_result["stats"]["mean"]
-                current_mean = current_result["stats"]["mean"]
-                percentage_change = (current_mean - baseline_mean) / baseline_mean
+                baseline_stats = baseline_result["stats"]
+                analysis[name]["baseline_stats"] = baseline_stats
 
-                if abs(percentage_change) > self.regression_threshold:
-                    regressions.append(
-                        {
-                            "name": name,
-                            "percentage_change": percentage_change,
-                            "baseline_mean": baseline_mean,
-                            "current_mean": current_mean,
-                        }
-                    )
-
-                analysis[name] = {
-                    "baseline": baseline_mean,
-                    "current": current_mean,
-                    "percentage_change": percentage_change,
-                }
-            else:
-                analysis[name] = {
-                    "baseline": None,
-                    "current": current_result["stats"]["mean"],
-                    "percentage_change": None,
-                }
+                regressions = self.detector.detect(baseline_stats, current_stats)
+                if regressions:
+                    for r in regressions:
+                        r["name"] = name
+                    analysis[name]["regressions"] = regressions
+                    all_regressions.extend(regressions)
 
         return {
             "analysis": analysis,
-            "regressions": regressions,
+            "regressions": all_regressions,
         }
 
     def load_benchmark_data(self, json_file: str) -> list[dict[str, Any]]:
@@ -81,6 +164,10 @@ class BenchmarkAnalyzer:
         Returns:
             A list of benchmark results.
         """
-        with open(json_file) as f:
-            data: dict[str, list[dict[str, Any]]] = json.load(f)
-        return data["benchmarks"]
+        try:
+            with open(json_file) as f:
+                data: dict[str, Any] = json.load(f)
+            benchmarks: list[dict[str, Any]] = data.get("benchmarks", [])
+            return benchmarks
+        except (FileNotFoundError, json.JSONDecodeError):
+            return []
