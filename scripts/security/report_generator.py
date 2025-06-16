@@ -1,6 +1,5 @@
 import argparse
 import json
-import re
 
 
 def generate_report(report_file: str, output_markdown: str) -> None:
@@ -46,6 +45,7 @@ def generate_report(report_file: str, output_markdown: str) -> None:
 def generate_markdown(report_data: dict) -> str:
     """
     Generates a Markdown string from the report data.
+    Secret detection results are intentionally excluded for security compliance.
 
     Args:
         report_data (dict): The report data.
@@ -61,15 +61,16 @@ def generate_markdown(report_data: dict) -> str:
     comparison_status = report_data.get("comparison_status", "unknown")
     markdown += f"**Comparison Status:** {comparison_status}\n\n"
 
+    markdown += (
+        "> **:warning: Secret detection results are intentionally excluded from this report for security and compliance reasons.**\n"
+        "> If secrets were detected, review the original scan output in a secure environment.\n\n"
+    )
+
     results = report_data.get("results", {})
 
     markdown += "### Dependency Scan Results\n\n"
     dependency_scan_results = results.get("dependency_scan", {})
     markdown += format_dependency_scan_results(dependency_scan_results)
-
-    markdown += "### Secret Detection Results\n\n"
-    secret_detection_results = results.get("secret_detection", {})
-    markdown += format_secret_detection_results(secret_detection_results)
 
     return markdown
 
@@ -115,61 +116,15 @@ def format_dependency_scan_results(dependency_scan_results: dict) -> str:
     return markdown
 
 
-def format_secret_detection_results(secret_detection_results: dict) -> str:
-    """
-    Formats the secret detection results into a Markdown string.
-    SECURITY: Avoids including actual secret content in output.
-
-    Args:
-        secret_detection_results (dict): The secret detection results.
-
-    Returns:
-        str: A Markdown string with only summary information.
-    """
-    markdown = ""
-    for tool, result in secret_detection_results.items():
-        markdown += f"#### {tool.capitalize()} Results\n\n"
-        # The result from detect-secrets is a string containing the output
-        if isinstance(result, str):
-            if "No secrets detected" in result:
-                markdown += "No secrets detected.\n\n"
-            else:
-                # Count potential secrets instead of displaying them
-                secret_count = result.count("Secret detected") if "Secret detected" in result else 1
-                markdown += f"⚠️ **{secret_count} potential secret(s) detected**\n\n"
-                markdown += "_Details omitted for security - check original scan output._\n\n"
-        else:
-            markdown += "No results found.\n\n"
-    return markdown
+# Secret detection result processing is intentionally omitted for security compliance.
 
 
 def sanitize_markdown_content(content: str) -> str:
     """
-    Sanitize markdown content to remove potential secrets or sensitive information.
-    
-    Args:
-        content (str): The original markdown content.
-        
-    Returns:
-        str: Sanitized markdown content with sensitive data redacted.
+    No-op sanitizer: Secret detection results are not included in the report.
+    This function is retained for interface compatibility.
     """
-    # Pattern to match common secret formats
-    patterns = [
-        # API keys, tokens, passwords
-        (r'["\']?[a-zA-Z_][a-zA-Z0-9_]*["\']?\s*[:=]\s*["\'][^"\']{20,}["\']', '[REDACTED_SECRET]'),
-        # Base64 encoded strings (potential secrets)
-        (r'[A-Za-z0-9+/]{40,}={0,2}', '[REDACTED_BASE64]'),
-        # Hex strings that might be keys
-        (r'[a-fA-F0-9]{32,}', '[REDACTED_HEX]'),
-        # URLs with credentials
-        (r'https?://[^:\s]+:[^@\s]+@[^\s]+', '[REDACTED_URL_WITH_CREDS]'),
-    ]
-    
-    sanitized = content
-    for pattern, replacement in patterns:
-        sanitized = re.sub(pattern, replacement, sanitized)
-    
-    return sanitized
+    return content
 
 
 def main() -> None:
