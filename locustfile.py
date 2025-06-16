@@ -2,23 +2,21 @@
 Locust load testing configuration for LLM Task Framework.
 
 This file provides comprehensive load testing for:
-1. MCP server endpoints
+1. MCP server endpoints (simulated)
 2. CLI functionality
 3. Core framework functionality
 4. Concurrent operations
 
-Usage:
-    # Basic load test
-    locust --headless --users 10 --spawn-rate 2 --run-time 60s
+This locustfile is designed to be run headlessly in a CI/CD environment.
+Configuration (users, spawn rate, etc.) is controlled by the CI workflow,
+which uses `scripts/load_test_config.py`.
 
-    # Heavy load profile
-    locust --headless --users 50 --spawn-rate 5 --run-time 300s
-
-    # With custom host
-    locust --headless --users 10 --spawn-rate 2 --run-time 60s --host http://localhost:8000
+Usage in CI (example):
+    locust -f locustfile.py --headless \\
+           --users 10 --spawn-rate 2 --run-time 60s \\
+           --json report.json --html report.html
 
 Environment Variables:
-    LOAD_TEST_PROFILE: light|medium|heavy (default: light)
     MCP_SERVER_HOST: Host for MCP server testing (default: localhost)
     MCP_SERVER_PORT: Port for MCP server testing (default: 8080)
 """
@@ -31,8 +29,8 @@ import time
 from typing import Any
 
 from locust import (  # type: ignore[import-not-found]
-    HttpUser,
     TaskSet,
+    User,
     between,
     events,
     task,
@@ -66,8 +64,9 @@ class FrameworkTaskSet(TaskSet):
         """Test CLI help command performance."""
         start_time = time.time()
         try:
+            # Using pixi to ensure correct environment
             result: subprocess.CompletedProcess[str] = subprocess.run(
-                ["python", "-m", "llm_task_framework.cli.main", "--help"],
+                ["pixi", "run", "ltf", "--help"],
                 capture_output=True,
                 text=True,
                 timeout=10,
@@ -119,7 +118,13 @@ class FrameworkTaskSet(TaskSet):
         start_time = time.time()
         try:
             result: subprocess.CompletedProcess[str] = subprocess.run(
-                ["python", "-c", "import llm_task_framework; print('OK')"],
+                [
+                    "pixi",
+                    "run",
+                    "python",
+                    "-c",
+                    "import llm_task_framework; print('OK')",
+                ],
                 capture_output=True,
                 text=True,
                 timeout=15,
@@ -183,7 +188,7 @@ else:
 """
 
             result: subprocess.CompletedProcess[str] = subprocess.run(
-                ["python", "-c", validation_script],  # nosec B603 B607
+                ["pixi", "run", "python", "-c", validation_script],  # nosec B603 B607
                 capture_output=True,
                 text=True,
                 timeout=5,
@@ -223,12 +228,6 @@ else:
 
 class MCPServerTaskSet(TaskSet):
     """Task set for testing MCP server functionality."""
-
-    def on_start(self) -> None:
-        """Setup MCP server testing."""
-        self.mcp_host = os.getenv("MCP_SERVER_HOST", "localhost")
-        self.mcp_port = int(os.getenv("MCP_SERVER_PORT", "8080"))
-        self.base_url = f"http://{self.mcp_host}:{self.mcp_port}"
 
     @task(2)
     def test_mcp_health_check(self) -> None:
@@ -287,7 +286,7 @@ print("MCP_PROTOCOL_OK")
 """
 
             result: subprocess.CompletedProcess[str] = subprocess.run(
-                ["python", "-c", mcp_test_script],  # nosec B603 B607
+                ["pixi", "run", "python", "-c", mcp_test_script],  # nosec B603 B607
                 capture_output=True,
                 text=True,
                 timeout=5,
@@ -340,7 +339,7 @@ import time
 
 def import_test():
     result = subprocess.run(
-        ["python", "-c", "import llm_task_framework; print('IMPORT_OK')"],
+        ["pixi", "run", "python", "-c", "import llm_task_framework; print('IMPORT_OK')"],
         capture_output=True,
         text=True,
         timeout=10
@@ -359,7 +358,7 @@ else:
 """
 
             result: subprocess.CompletedProcess[str] = subprocess.run(
-                ["python", "-c", concurrent_script],  # nosec B603 B607
+                ["pixi", "run", "python", "-c", concurrent_script],  # nosec B603 B607
                 capture_output=True,
                 text=True,
                 timeout=30,
@@ -397,12 +396,13 @@ else:
             )
 
 
-class LLMTaskFrameworkUser(HttpUser):
+class LLMTaskFrameworkUser(User):
     """
     Load test user for LLM Task Framework.
 
     Simulates realistic usage patterns including CLI operations,
     framework initialization, and MCP server interactions.
+    Since tasks are not HTTP-based, this inherits from locust.User.
     """
 
     # Task sets to execute (weighted distribution)
@@ -412,101 +412,52 @@ class LLMTaskFrameworkUser(HttpUser):
         (ConcurrentOperationsTaskSet, 2),  # 20% - Concurrent operations
     ]
 
-    # Configure user behavior based on load profile
-    def __init__(self, *args: Any, **kwargs: Any) -> None:
-        super().__init__(*args, **kwargs)
-
-        profile = os.getenv("LOAD_TEST_PROFILE", "light").lower()
-
-        if profile == "heavy":
-            self.wait_time = between(0.5, 2.0)  # Aggressive load
-        elif profile == "medium":
-            self.wait_time = between(1.0, 3.0)  # Moderate load
-        else:  # light
-            self.wait_time = between(2.0, 5.0)  # Light load
+    # Wait time between tasks
+    wait_time = between(1.0, 5.0)
 
     def on_start(self) -> None:
         """Called when a user starts."""
-        print(
-            f"Starting load test user (profile: {os.getenv('LOAD_TEST_PROFILE', 'light')})"
-        )
+        print("Starting load test user...")
 
     def on_stop(self) -> None:
         """Called when a user stops."""
-        print("Stopping load test user")
+        print("Stopping load test user.")
 
 
-# Load test configuration based on environment
-def get_load_profile() -> dict[str, Any]:
-    """Get load testing configuration based on profile."""
-    profile: str = os.getenv("LOAD_TEST_PROFILE", "light").lower()
-
-    profiles: dict[str, dict[str, Any]] = {
-        "light": {
-            "users": 5,
-            "spawn_rate": 1,
-            "run_time": "2m",
-            "description": "Light load testing for development",
-        },
-        "medium": {
-            "users": 15,
-            "spawn_rate": 3,
-            "run_time": "5m",
-            "description": "Medium load testing for staging",
-        },
-        "heavy": {
-            "users": 50,
-            "spawn_rate": 5,
-            "run_time": "10m",
-            "description": "Heavy load testing for performance validation",
-        },
-    }
-
-    return profiles.get(profile, profiles["light"])
-
-
-# Event listeners for custom metrics
+# Event listeners for custom metrics and reporting
 @events.init.add_listener
 def on_locust_init(environment: Environment, **kwargs: Any) -> None:  # noqa: ARG001
     """Initialize custom metrics and reporting."""
     print("🚀 LLM Task Framework Load Testing Started")
-    print(f"Profile: {os.getenv('LOAD_TEST_PROFILE', 'light')}")
-    print(f"Configuration: {get_load_profile()}")
+    if environment.web_ui:
+        print(
+            f"Web UI running at http://{environment.web_ui.host}:{environment.web_ui.port}"
+        )
+    else:
+        print("Running in headless mode.")
 
 
 @events.test_stop.add_listener
 def on_test_stop(environment: Environment, **kwargs: Any) -> None:  # noqa: ARG001
-    """Generate performance summary report."""
+    """Generate performance summary report in console."""
     print("\n" + "=" * 60)
     print("🏁 Load Testing Complete - Performance Summary")
     print("=" * 60)
 
-    # Calculate basic statistics
     if hasattr(environment.stats, "total"):
-        total_requests = environment.stats.total.num_requests
-        avg_response_time = environment.stats.total.avg_response_time
-        failure_rate = environment.stats.total.fail_ratio
+        stats = environment.stats.total
+        print(f"📊 Total Requests: {stats.num_requests}")
+        print(f"⏱️  Average Response Time: {stats.avg_response_time:.2f}ms")
+        print(f"#️⃣  Median Response Time: {stats.median_response_time}ms")
+        print(f"📈 Requests/s: {stats.total_rps:.2f}")
+        print(f"❌ Failure Rate: {stats.fail_ratio:.2%}")
 
-        print(f"📊 Total Requests: {total_requests}")
-        print(f"⏱️  Average Response Time: {avg_response_time:.2f}ms")
-        print(f"❌ Failure Rate: {failure_rate:.2%}")
-
-        # Performance thresholds
-        if avg_response_time > 5000:
-            print("⚠️  WARNING: High average response time detected")
-        if failure_rate > 0.05:
-            print("⚠️  WARNING: High failure rate detected")
-        if avg_response_time <= 1000 and failure_rate <= 0.01:
-            print("✅ EXCELLENT: Performance within optimal thresholds")
+        # Performance thresholds check
+        if stats.avg_response_time > 5000:
+            print("⚠️  WARNING: High average response time detected (>5000ms)")
+        if stats.fail_ratio > 0.05:
+            print("⚠️  WARNING: High failure rate detected (>5%)")
+        if stats.avg_response_time <= 1000 and stats.fail_ratio <= 0.01:
+            print("✅ EXCELLENT: Performance within optimal thresholds.")
 
     print("=" * 60)
-
-
-if __name__ == "__main__":
-    # Example usage when run directly
-    profile = get_load_profile()
-    print(f"Load Test Profile: {profile['description']}")
-    print("Recommended command:")
-    print(
-        f"locust --headless --users {profile['users']} --spawn-rate {profile['spawn_rate']} --run-time {profile['run_time']}"
-    )

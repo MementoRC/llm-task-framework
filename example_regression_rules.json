@@ -7,7 +7,7 @@
   },
   {
     "metric": "stddev",
-    "threshold_type": "percentage", 
+    "threshold_type": "percentage",
     "threshold": 0.5,
     "severity": "warning"
   },
