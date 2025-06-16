@@ -11,13 +11,22 @@ def generate_report(report_file: str, output_markdown: str) -> None:
         output_markdown (str): Path to the output Markdown file.
     """
     try:
-        with open(report_file) as f:
+        with open(report_file, encoding="utf-8") as f:
             report_data = json.load(f)
 
         markdown_content = generate_markdown(report_data)
 
-        with open(output_markdown, "w") as f:
-            f.write(markdown_content)
+        # Write the markdown content to the output file with restrictive permissions
+        # to avoid clear-text exposure of sensitive information.
+        try:
+            with open(output_markdown, "w", encoding="utf-8") as f:
+                f.write(markdown_content)
+            # Set file permissions to owner read/write only (0600)
+            import os
+            os.chmod(output_markdown, 0o600)
+        except Exception as file_exc:
+            print(f"::error:: Failed to securely write markdown file: {file_exc}")
+            exit(1)
 
     except FileNotFoundError:
         print(f"::error:: Report file not found: {report_file}")
