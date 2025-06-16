@@ -1,5 +1,6 @@
 import argparse
 import json
+import re
 
 
 def generate_report(report_file: str, output_markdown: str) -> None:
@@ -16,11 +17,14 @@ def generate_report(report_file: str, output_markdown: str) -> None:
 
         markdown_content = generate_markdown(report_data)
 
-        # Write the markdown content to the output file with restrictive permissions
-        # to avoid clear-text exposure of sensitive information.
+        # Sanitize content before writing to prevent exposure of sensitive data
+        # Remove any detected secrets or sensitive information from the report
+        sanitized_content = sanitize_markdown_content(markdown_content)
+        
+        # Write the sanitized markdown content to the output file with restrictive permissions
         try:
             with open(output_markdown, "w", encoding="utf-8") as f:
-                f.write(markdown_content)
+                f.write(sanitized_content)
             # Set file permissions to owner read/write only (0600)
             import os
             os.chmod(output_markdown, 0o600)
@@ -133,6 +137,35 @@ def format_secret_detection_results(secret_detection_results: dict) -> str:
         else:
             markdown += "No results found.\n\n"
     return markdown
+
+
+def sanitize_markdown_content(content: str) -> str:
+    """
+    Sanitize markdown content to remove potential secrets or sensitive information.
+    
+    Args:
+        content (str): The original markdown content.
+        
+    Returns:
+        str: Sanitized markdown content with sensitive data redacted.
+    """
+    # Pattern to match common secret formats
+    patterns = [
+        # API keys, tokens, passwords
+        (r'["\']?[a-zA-Z_][a-zA-Z0-9_]*["\']?\s*[:=]\s*["\'][^"\']{20,}["\']', '[REDACTED_SECRET]'),
+        # Base64 encoded strings (potential secrets)
+        (r'[A-Za-z0-9+/]{40,}={0,2}', '[REDACTED_BASE64]'),
+        # Hex strings that might be keys
+        (r'[a-fA-F0-9]{32,}', '[REDACTED_HEX]'),
+        # URLs with credentials
+        (r'https?://[^:\s]+:[^@\s]+@[^\s]+', '[REDACTED_URL_WITH_CREDS]'),
+    ]
+    
+    sanitized = content
+    for pattern, replacement in patterns:
+        sanitized = re.sub(pattern, replacement, sanitized)
+    
+    return sanitized
 
 
 def main() -> None:
