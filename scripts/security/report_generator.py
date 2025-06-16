@@ -118,12 +118,13 @@ def format_dependency_scan_results(dependency_scan_results: dict) -> str:
 def format_secret_detection_results(secret_detection_results: dict) -> str:
     """
     Formats the secret detection results into a Markdown string.
+    SECURITY: Avoids including actual secret content in output.
 
     Args:
         secret_detection_results (dict): The secret detection results.
 
     Returns:
-        str: A Markdown string.
+        str: A Markdown string with only summary information.
     """
     markdown = ""
     for tool, result in secret_detection_results.items():
@@ -133,7 +134,10 @@ def format_secret_detection_results(secret_detection_results: dict) -> str:
             if "No secrets detected" in result:
                 markdown += "No secrets detected.\n\n"
             else:
-                markdown += "```text\n" + result + "\n```\n\n"
+                # Count potential secrets instead of displaying them
+                secret_count = result.count("Secret detected") if "Secret detected" in result else 1
+                markdown += f"⚠️ **{secret_count} potential secret(s) detected**\n\n"
+                markdown += "_Details omitted for security - check original scan output._\n\n"
         else:
             markdown += "No results found.\n\n"
     return markdown
