@@ -22,7 +22,7 @@ import argparse
 
 
 def post_to_github_pr(
-    report_content: str, repo: str, pr_number: int, token: str
+    report_content: str, repo: str, pr_number: int, token: str  # noqa: ARG001
 ) -> None:
     """Posts a comment to a GitHub Pull Request."""
     # Implementation would use the GitHub API (e.g., via `requests` or `PyGithub`)
@@ -59,7 +59,7 @@ def main() -> None:
     try:
         with open(args.report_file) as f:
             content = f.read()
-    except IOError as e:
+    except OSError as e:
         print(f"Error reading report file: {e}")
         return
 

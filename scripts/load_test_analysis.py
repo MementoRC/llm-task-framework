@@ -14,7 +14,7 @@ Usage:
 import argparse
 import json
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any
 
 # Thresholds for regression detection
 REGRESSION_THRESHOLDS = {
@@ -24,18 +24,18 @@ REGRESSION_THRESHOLDS = {
 }
 
 
-def parse_locust_report(report_path: Path) -> Optional[Dict[str, Any]]:
+def parse_locust_report(report_path: Path) -> dict[str, Any] | None:
     """Parses a Locust JSON report file."""
     if not report_path or not report_path.exists():
         return None
     try:
         with open(report_path) as f:
             return json.load(f)
-    except (json.JSONDecodeError, IOError):
+    except (OSError, json.JSONDecodeError):
         return None
 
 
-def get_stats_summary(report_data: Dict[str, Any]) -> Dict[str, Any]:
+def get_stats_summary(report_data: dict[str, Any]) -> dict[str, Any]:
     """Extracts a summary of key statistics from the report."""
     stats = report_data.get("stats", [])
     total_stats = next((s for s in stats if s["name"] == "Aggregated"), None)
@@ -69,14 +69,14 @@ def get_stats_summary(report_data: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def compare_summaries(
-    current: Dict[str, Any], baseline: Dict[str, Any]
-) -> Dict[str, Any]:
+    current: dict[str, Any], baseline: dict[str, Any]
+) -> dict[str, Any]:
     """Compares current summary with a baseline and detects regressions."""
     comparison = {}
     regressions = []
 
     for key in current:
-        if key in baseline and isinstance(current[key], (int, float)):
+        if key in baseline and isinstance(current[key], int | float):
             current_val = current[key]
             baseline_val = baseline[key]
             delta = current_val - baseline_val
@@ -118,8 +118,8 @@ def compare_summaries(
 
 
 def generate_markdown_summary(
-    current_summary: Dict[str, Any],
-    comparison_results: Optional[Dict[str, Any]] = None,
+    current_summary: dict[str, Any],
+    comparison_results: dict[str, Any] | None = None,
 ) -> str:
     """Generates a markdown summary of the load test results."""
 
@@ -202,7 +202,7 @@ def main() -> None:
         with open(args.output_summary, "w") as f:
             f.write(markdown_summary)
         print(f"Successfully generated summary at {args.output_summary}")
-    except IOError as e:
+    except OSError as e:
         print(f"Error writing summary file: {e}")
 
 

@@ -10,10 +10,10 @@ Usage:
 
 import argparse
 import json
-from typing import Any, Dict
+from typing import Any
 
 # Define load testing profiles
-PROFILES: Dict[str, Dict[str, Any]] = {
+PROFILES: dict[str, dict[str, Any]] = {
     "light": {
         "users": 5,
         "spawn_rate": 1,

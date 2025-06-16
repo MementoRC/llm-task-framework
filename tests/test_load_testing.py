@@ -13,10 +13,10 @@ import pytest
 sys.path.insert(0, str(Path(__file__).parent.parent / "scripts"))
 
 from load_test_analysis import (
+    compare_summaries,
     generate_markdown_summary,
     get_stats_summary,
     parse_locust_report,
-    compare_summaries,
 )
 from load_test_config import get_config
 
