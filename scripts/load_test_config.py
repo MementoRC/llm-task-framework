@@ -12,7 +12,7 @@ import argparse
 import json
 from typing import Any
 
-# Define load testing profiles
+# Define load testing profiles, including scenario-specific profiles
 PROFILES: dict[str, dict[str, Any]] = {
     "light": {
         "users": 5,
@@ -31,6 +31,37 @@ PROFILES: dict[str, dict[str, Any]] = {
         "spawn_rate": 10,
         "run_time": "10m",
         "description": "Heavy load testing for performance validation and stress testing.",
+    },
+    # Scenario-specific profiles
+    "stress": {
+        "users": 100,
+        "spawn_rate": 50,
+        "run_time": "5m",
+        "description": "Stress test: extreme load, CPU/memory intensive.",
+    },
+    "spike": {
+        "users": 30,
+        "spawn_rate": 30,
+        "run_time": "2m",
+        "description": "Spike test: sudden, sharp load increases.",
+    },
+    "soak": {
+        "users": 10,
+        "spawn_rate": 2,
+        "run_time": "30m",
+        "description": "Soak test: long-duration, steady load.",
+    },
+    "volume": {
+        "users": 20,
+        "spawn_rate": 5,
+        "run_time": "10m",
+        "description": "Volume test: large-scale data/batch processing.",
+    },
+    "error": {
+        "users": 10,
+        "spawn_rate": 2,
+        "run_time": "5m",
+        "description": "Error test: error injection and recovery.",
     },
 }
 
