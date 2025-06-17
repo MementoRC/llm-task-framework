@@ -6,7 +6,7 @@ from click import Context
 from llm_task_framework.__version__ import __version__
 
 
-@click.group()  # type: ignore[misc]
+@click.group()
 @click.version_option(version=__version__)
 @click.pass_context
 def main(ctx: Context) -> None:
@@ -14,13 +14,13 @@ def main(ctx: Context) -> None:
     ctx.ensure_object(dict)
 
 
-@main.command()  # type: ignore[misc]
+@main.command()
 def version() -> None:
     """Show the version."""
     click.echo(f"LLM Task Framework {__version__}")
 
 
-@main.command()  # type: ignore[misc]
+@main.command()
 @click.option("--host", default="localhost", help="Host to bind the MCP server to")
 @click.option("--port", default=8000, help="Port to bind the MCP server to")
 @click.option(
@@ -32,7 +32,7 @@ def serve(host: str, port: int, transport: str) -> None:
     click.echo("(MCP server implementation coming soon)")
 
 
-@main.command()  # type: ignore[misc]
+@main.command()
 def list_tasks() -> None:
     """List available task types."""
     click.echo("Available task types:")
