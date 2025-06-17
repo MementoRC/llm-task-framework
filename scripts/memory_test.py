@@ -15,16 +15,24 @@ Usage:
     python -m memory_profiler scripts/memory_test.py
 """
 
+import concurrent.futures
 import gc
 import os
 import sys
 import time
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 from pathlib import Path
 
+import psutil  # type: ignore[import-untyped]
 from memory_profiler import profile  # type: ignore[import-not-found]
 
 # Add src to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
+
+import llm_task_framework  # type: ignore[import-untyped]
 
 
 @profile
@@ -34,9 +42,6 @@ def test_framework_import() -> bool:
 
     # Baseline memory
     gc.collect()
-
-    # Import framework
-    import llm_task_framework  # type: ignore[import-untyped]
 
     # Force garbage collection
     gc.collect()
@@ -54,8 +59,6 @@ def test_cli_memory() -> bool:
 
     try:
         # Simulate CLI argument parsing
-        import sys
-
         original_argv: list[str] = sys.argv[:]
         sys.argv = ["llm-task-framework", "--help"]
 
@@ -99,8 +102,6 @@ def test_concurrent_operations_memory() -> bool:
 
     gc.collect()
 
-    import concurrent.futures
-
     def memory_intensive_task() -> bool:
         """Simulate memory-intensive task."""
         # Create some data structures
@@ -136,8 +137,6 @@ def test_concurrent_operations_memory() -> bool:
 def test_memory_leaks() -> bool:
     """Test for potential memory leaks."""
     print("Testing for memory leaks...")
-
-    import psutil  # type: ignore[import-untyped]
 
     process = psutil.Process(os.getpid())
 
@@ -194,11 +193,6 @@ def main() -> int:
     """Run all memory tests."""
     print("🧠 LLM Task Framework Memory Testing")
     print("=" * 50)
-
-    from typing import TYPE_CHECKING
-
-    if TYPE_CHECKING:
-        from collections.abc import Callable
 
     tests: list[tuple[str, Callable[[], bool]]] = [
         ("Framework Import", test_framework_import),

@@ -4,19 +4,21 @@ Soak Testing Scenarios for LLM Task Framework.
 Simulates long-duration, steady load to detect memory leaks and stability issues.
 """
 
-import subprocess
-import time
-import tempfile
 import json
 import os
-from locust import TaskSet, task, events
+import subprocess
+import tempfile
+import time
+
+from locust import TaskSet, events, task
+
 
 class SoakTestingTaskSet(TaskSet):
     """
     Soak test: Long-running, steady-state operations.
     """
 
-    def on_start(self):
+    def on_start(self) -> None:
         self.temp_dir = tempfile.mkdtemp()
         self.config_file = os.path.join(self.temp_dir, "soak_config.json")
         config = {
@@ -31,11 +33,11 @@ class SoakTestingTaskSet(TaskSet):
             json.dump(config, f)
 
     @task(2)
-    def soak_cli_help(self):
+    def soak_cli_help(self) -> None:
         """Repeated CLI help calls over time."""
         start = time.time()
         try:
-            result = subprocess.run(
+            result = subprocess.run(  # nosec
                 ["pixi", "run", "ltf", "--help"],
                 capture_output=True,
                 text=True,
@@ -61,11 +63,11 @@ class SoakTestingTaskSet(TaskSet):
             )
 
     @task(2)
-    def soak_framework_import(self):
+    def soak_framework_import(self) -> None:
         """Repeated framework imports over time."""
         start = time.time()
         try:
-            result = subprocess.run(
+            result = subprocess.run(  # nosec
                 ["pixi", "run", "python", "-c", "import llm_task_framework"],
                 capture_output=True,
                 text=True,
@@ -91,7 +93,7 @@ class SoakTestingTaskSet(TaskSet):
             )
 
     @task(1)
-    def soak_config_validation(self):
+    def soak_config_validation(self) -> None:
         """Repeated config validation over time."""
         start = time.time()
         try:
@@ -104,7 +106,7 @@ if 'framework' in config and 'llm' in config:
 else:
     print('SOAK_CONFIG_FAIL')
 """
-            result = subprocess.run(
+            result = subprocess.run(  # nosec
                 ["pixi", "run", "python", "-c", script],
                 capture_output=True,
                 text=True,
@@ -116,7 +118,9 @@ else:
                 name="soak_config_validation",
                 response_time=response_time,
                 response_length=len(result.stdout),
-                exception=None if result.returncode == 0 and "SOAK_CONFIG_OK" in result.stdout else Exception(result.stderr),
+                exception=None
+                if result.returncode == 0 and "SOAK_CONFIG_OK" in result.stdout
+                else Exception(result.stderr),
                 context={},
             )
         except Exception as e:

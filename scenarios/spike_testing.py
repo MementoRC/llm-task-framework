@@ -6,7 +6,9 @@ Simulates sudden, sharp increases in load.
 
 import subprocess
 import time
-from locust import TaskSet, task, events
+
+from locust import TaskSet, events, task
+
 
 class SpikeTestingTaskSet(TaskSet):
     """
@@ -14,12 +16,12 @@ class SpikeTestingTaskSet(TaskSet):
     """
 
     @task(3)
-    def spike_cli_help(self):
+    def spike_cli_help(self) -> None:
         """Burst of CLI help calls."""
         start = time.time()
         try:
             for _ in range(10):  # Simulate a spike
-                result = subprocess.run(
+                result = subprocess.run(  # nosec
                     ["pixi", "run", "ltf", "--help"],
                     capture_output=True,
                     text=True,
@@ -45,12 +47,12 @@ class SpikeTestingTaskSet(TaskSet):
             )
 
     @task(2)
-    def spike_framework_import(self):
+    def spike_framework_import(self) -> None:
         """Burst of framework imports."""
         start = time.time()
         try:
             for _ in range(10):
-                result = subprocess.run(
+                result = subprocess.run(  # nosec
                     ["pixi", "run", "python", "-c", "import llm_task_framework"],
                     capture_output=True,
                     text=True,
@@ -76,7 +78,7 @@ class SpikeTestingTaskSet(TaskSet):
             )
 
     @task(1)
-    def spike_concurrent(self):
+    def spike_concurrent(self) -> None:
         """Spike of concurrent operations."""
         start = time.time()
         try:
@@ -98,7 +100,7 @@ if all(results):
 else:
     print("SPIKE_CONCURRENT_FAIL")
 """
-            result = subprocess.run(
+            result = subprocess.run(  # nosec
                 ["pixi", "run", "python", "-c", script],
                 capture_output=True,
                 text=True,
@@ -110,7 +112,9 @@ else:
                 name="spike_concurrent",
                 response_time=response_time,
                 response_length=len(result.stdout),
-                exception=None if result.returncode == 0 and "SPIKE_CONCURRENT_OK" in result.stdout else Exception(result.stderr),
+                exception=None
+                if result.returncode == 0 and "SPIKE_CONCURRENT_OK" in result.stdout
+                else Exception(result.stderr),
                 context={},
             )
         except Exception as e:

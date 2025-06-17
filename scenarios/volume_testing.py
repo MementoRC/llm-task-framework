@@ -4,19 +4,21 @@ Volume Testing Scenarios for LLM Task Framework.
 Simulates large-scale data and batch processing.
 """
 
-import subprocess
-import time
-import tempfile
 import json
 import os
-from locust import TaskSet, task, events
+import subprocess
+import tempfile
+import time
+
+from locust import TaskSet, events, task
+
 
 class VolumeTestingTaskSet(TaskSet):
     """
     Volume test: Large dataset and batch processing scenarios.
     """
 
-    def on_start(self):
+    def on_start(self) -> None:
         self.temp_dir = tempfile.mkdtemp()
         self.large_batch_file = os.path.join(self.temp_dir, "large_batch.json")
         # Create a large batch of tasks
@@ -25,7 +27,7 @@ class VolumeTestingTaskSet(TaskSet):
             json.dump(batch, f)
 
     @task(2)
-    def volume_cli_batch(self):
+    def volume_cli_batch(self) -> None:
         """Test CLI with large batch input."""
         start = time.time()
         try:
@@ -36,7 +38,7 @@ with open('{self.large_batch_file}') as f:
     batch = json.load(f)
 print('BATCH_SIZE', len(batch))
 """
-            result = subprocess.run(
+            result = subprocess.run(  # nosec
                 ["pixi", "run", "python", "-c", script],
                 capture_output=True,
                 text=True,
@@ -48,7 +50,9 @@ print('BATCH_SIZE', len(batch))
                 name="volume_cli_batch",
                 response_time=response_time,
                 response_length=len(result.stdout),
-                exception=None if result.returncode == 0 and "BATCH_SIZE" in result.stdout else Exception(result.stderr),
+                exception=None
+                if result.returncode == 0 and "BATCH_SIZE" in result.stdout
+                else Exception(result.stderr),
                 context={},
             )
         except Exception as e:
@@ -62,7 +66,7 @@ print('BATCH_SIZE', len(batch))
             )
 
     @task(2)
-    def volume_framework_batch_import(self):
+    def volume_framework_batch_import(self) -> None:
         """Test framework import in batch."""
         start = time.time()
         try:
@@ -71,7 +75,7 @@ for _ in range(1000):
     import llm_task_framework
 print('VOLUME_IMPORT_OK')
 """
-            result = subprocess.run(
+            result = subprocess.run(  # nosec
                 ["pixi", "run", "python", "-c", script],
                 capture_output=True,
                 text=True,
@@ -83,7 +87,9 @@ print('VOLUME_IMPORT_OK')
                 name="volume_framework_batch_import",
                 response_time=response_time,
                 response_length=len(result.stdout),
-                exception=None if result.returncode == 0 and "VOLUME_IMPORT_OK" in result.stdout else Exception(result.stderr),
+                exception=None
+                if result.returncode == 0 and "VOLUME_IMPORT_OK" in result.stdout
+                else Exception(result.stderr),
                 context={},
             )
         except Exception as e:
@@ -97,7 +103,7 @@ print('VOLUME_IMPORT_OK')
             )
 
     @task(1)
-    def volume_concurrent_batch(self):
+    def volume_concurrent_batch(self) -> None:
         """Test concurrent batch operations."""
         start = time.time()
         try:
@@ -113,7 +119,7 @@ if all(results):
 else:
     print("VOLUME_CONCURRENT_FAIL")
 """
-            result = subprocess.run(
+            result = subprocess.run(  # nosec
                 ["pixi", "run", "python", "-c", script],
                 capture_output=True,
                 text=True,
@@ -125,7 +131,9 @@ else:
                 name="volume_concurrent_batch",
                 response_time=response_time,
                 response_length=len(result.stdout),
-                exception=None if result.returncode == 0 and "VOLUME_CONCURRENT_OK" in result.stdout else Exception(result.stderr),
+                exception=None
+                if result.returncode == 0 and "VOLUME_CONCURRENT_OK" in result.stdout
+                else Exception(result.stderr),
                 context={},
             )
         except Exception as e:

@@ -98,7 +98,8 @@ def compare_summaries(
             # Regression checks
             if (
                 key == "avg_response_time"
-                and current_val > baseline_val * REGRESSION_THRESHOLDS["avg_response_time"]
+                and current_val
+                > baseline_val * REGRESSION_THRESHOLDS["avg_response_time"]
             ):
                 regressions.append(
                     f"Average response time increased by {change_pct:.2f}%"
@@ -109,7 +110,10 @@ def compare_summaries(
                 and current_val > baseline_val * REGRESSION_THRESHOLDS["failure_rate"]
             ):
                 regressions.append(f"Failure rate increased by {change_pct:.2f}%")
-            if key == "rps" and current_val < baseline_val * REGRESSION_THRESHOLDS["rps"]:
+            if (
+                key == "rps"
+                and current_val < baseline_val * REGRESSION_THRESHOLDS["rps"]
+            ):
                 regressions.append(
                     f"Requests per second (RPS) decreased by {-change_pct:.2f}%"
                 )

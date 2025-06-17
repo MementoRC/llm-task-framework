@@ -19,13 +19,14 @@ def generate_report(report_file: str, output_markdown: str) -> None:
         # Sanitize content before writing to prevent exposure of sensitive data
         # Remove any detected secrets or sensitive information from the report
         sanitized_content = sanitize_markdown_content(markdown_content)
-        
+
         # Write the sanitized markdown content to the output file with restrictive permissions
         try:
             with open(output_markdown, "w", encoding="utf-8") as f:
                 f.write(sanitized_content)
             # Set file permissions to owner read/write only (0600)
             import os
+
             os.chmod(output_markdown, 0o600)
         except Exception as file_exc:
             print(f"::error:: Failed to securely write markdown file: {file_exc}")

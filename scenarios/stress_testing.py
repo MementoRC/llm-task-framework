@@ -4,19 +4,21 @@ Stress Testing Scenarios for LLM Task Framework.
 Simulates extreme load and resource exhaustion.
 """
 
+import json
 import os
 import subprocess
-import time
 import tempfile
-import json
-from locust import TaskSet, task, events
+import time
+
+from locust import TaskSet, events, task
+
 
 class StressTestingTaskSet(TaskSet):
     """
     Stress test: CPU/memory intensive operations, rapid CLI and import calls.
     """
 
-    def on_start(self):
+    def on_start(self) -> None:
         self.temp_dir = tempfile.mkdtemp()
         self.large_config_file = os.path.join(self.temp_dir, "large_config.json")
         # Create a large config file to stress config parsing
@@ -34,11 +36,11 @@ class StressTestingTaskSet(TaskSet):
             json.dump(config, f)
 
     @task(3)
-    def stress_cli_help(self):
+    def stress_cli_help(self) -> None:
         """Rapid CLI help calls under stress."""
         start = time.time()
         try:
-            result = subprocess.run(
+            result = subprocess.run(  # nosec
                 ["pixi", "run", "ltf", "--help"],
                 capture_output=True,
                 text=True,
@@ -64,11 +66,11 @@ class StressTestingTaskSet(TaskSet):
             )
 
     @task(2)
-    def stress_framework_import(self):
+    def stress_framework_import(self) -> None:
         """Rapid framework import under stress."""
         start = time.time()
         try:
-            result = subprocess.run(
+            result = subprocess.run(  # nosec
                 ["pixi", "run", "python", "-c", "import llm_task_framework"],
                 capture_output=True,
                 text=True,
@@ -94,7 +96,7 @@ class StressTestingTaskSet(TaskSet):
             )
 
     @task(2)
-    def stress_config_parsing(self):
+    def stress_config_parsing(self) -> None:
         """Parse large config file to stress memory/CPU."""
         start = time.time()
         try:
@@ -104,7 +106,7 @@ with open('{self.large_config_file}') as f:
     config = json.load(f)
 print('LARGE_CONFIG_OK')
 """
-            result = subprocess.run(
+            result = subprocess.run(  # nosec
                 ["pixi", "run", "python", "-c", script],
                 capture_output=True,
                 text=True,
@@ -116,7 +118,9 @@ print('LARGE_CONFIG_OK')
                 name="stress_large_config",
                 response_time=response_time,
                 response_length=len(result.stdout),
-                exception=None if result.returncode == 0 and "LARGE_CONFIG_OK" in result.stdout else Exception(result.stderr),
+                exception=None
+                if result.returncode == 0 and "LARGE_CONFIG_OK" in result.stdout
+                else Exception(result.stderr),
                 context={},
             )
         except Exception as e:
@@ -130,7 +134,7 @@ print('LARGE_CONFIG_OK')
             )
 
     @task(1)
-    def stress_concurrent_imports(self):
+    def stress_concurrent_imports(self) -> None:
         """Concurrent imports to stress system."""
         start = time.time()
         try:
@@ -152,7 +156,7 @@ if all(results):
 else:
     print("STRESS_CONCURRENT_FAIL")
 """
-            result = subprocess.run(
+            result = subprocess.run(  # nosec
                 ["pixi", "run", "python", "-c", script],
                 capture_output=True,
                 text=True,
@@ -164,7 +168,9 @@ else:
                 name="stress_concurrent_imports",
                 response_time=response_time,
                 response_length=len(result.stdout),
-                exception=None if result.returncode == 0 and "STRESS_CONCURRENT_OK" in result.stdout else Exception(result.stderr),
+                exception=None
+                if result.returncode == 0 and "STRESS_CONCURRENT_OK" in result.stdout
+                else Exception(result.stderr),
                 context={},
             )
         except Exception as e:

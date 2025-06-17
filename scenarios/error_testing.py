@@ -6,7 +6,9 @@ Simulates error injection and recovery.
 
 import subprocess
 import time
-from locust import TaskSet, task, events
+
+from locust import TaskSet, events, task
+
 
 class ErrorTestingTaskSet(TaskSet):
     """
@@ -14,11 +16,11 @@ class ErrorTestingTaskSet(TaskSet):
     """
 
     @task(2)
-    def error_cli_invalid(self):
+    def error_cli_invalid(self) -> None:
         """Run CLI with invalid args to induce error."""
         start = time.time()
         try:
-            result = subprocess.run(
+            result = subprocess.run(  # nosec
                 ["pixi", "run", "ltf", "--invalid-flag"],
                 capture_output=True,
                 text=True,
@@ -30,7 +32,9 @@ class ErrorTestingTaskSet(TaskSet):
                 name="error_cli_invalid",
                 response_time=response_time,
                 response_length=len(result.stderr),
-                exception=None if result.returncode != 0 else Exception("Expected error not raised"),
+                exception=None
+                if result.returncode != 0
+                else Exception("Expected error not raised"),
                 context={},
             )
         except Exception as e:
@@ -44,11 +48,11 @@ class ErrorTestingTaskSet(TaskSet):
             )
 
     @task(2)
-    def error_framework_import_fail(self):
+    def error_framework_import_fail(self) -> None:
         """Try to import a non-existent module to induce error."""
         start = time.time()
         try:
-            result = subprocess.run(
+            result = subprocess.run(  # nosec
                 ["pixi", "run", "python", "-c", "import not_a_real_module"],
                 capture_output=True,
                 text=True,
@@ -60,7 +64,9 @@ class ErrorTestingTaskSet(TaskSet):
                 name="error_import_fail",
                 response_time=response_time,
                 response_length=len(result.stderr),
-                exception=None if result.returncode != 0 else Exception("Expected import error not raised"),
+                exception=None
+                if result.returncode != 0
+                else Exception("Expected import error not raised"),
                 context={},
             )
         except Exception as e:
@@ -74,11 +80,11 @@ class ErrorTestingTaskSet(TaskSet):
             )
 
     @task(1)
-    def error_recovery(self):
+    def error_recovery(self) -> None:
         """Test recovery after error by running a valid command."""
         start = time.time()
         try:
-            result = subprocess.run(
+            result = subprocess.run(  # nosec
                 ["pixi", "run", "ltf", "--help"],
                 capture_output=True,
                 text=True,

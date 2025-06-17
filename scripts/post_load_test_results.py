@@ -22,7 +22,10 @@ import argparse
 
 
 def post_to_github_pr(
-    report_content: str, repo: str, pr_number: int, token: str  # noqa: ARG001
+    report_content: str,
+    repo: str,
+    pr_number: int,
+    token: str,  # noqa: ARG001
 ) -> None:
     """Posts a comment to a GitHub Pull Request."""
     # Implementation would use the GitHub API (e.g., via `requests` or `PyGithub`)
@@ -50,7 +53,9 @@ def main() -> None:
         help="The target platform to post results to.",
     )
     # Add other arguments as needed for different targets
-    parser.add_argument("--repo", type=str, help="GitHub repository (e.g., 'owner/repo').")
+    parser.add_argument(
+        "--repo", type=str, help="GitHub repository (e.g., 'owner/repo')."
+    )
     parser.add_argument("--pr-number", type=int, help="GitHub PR number.")
     parser.add_argument("--token", type=str, help="API token for authentication.")
 
