@@ -6,7 +6,7 @@ Simulates extreme load and resource exhaustion.
 
 import json
 import os
-import subprocess
+import subprocess  # nosec B404
 import tempfile
 import time
 

@@ -4,7 +4,7 @@ Spike Testing Scenarios for LLM Task Framework.
 Simulates sudden, sharp increases in load.
 """
 
-import subprocess
+import subprocess  # nosec B404
 import time
 
 from locust import TaskSet, events, task

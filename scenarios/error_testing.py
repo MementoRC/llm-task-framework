@@ -4,7 +4,7 @@ Error Rate Testing Scenarios for LLM Task Framework.
 Simulates error injection and recovery.
 """
 
-import subprocess
+import subprocess  # nosec B404
 import time
 
 from locust import TaskSet, events, task

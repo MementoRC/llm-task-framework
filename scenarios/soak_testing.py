@@ -6,7 +6,7 @@ Simulates long-duration, steady load to detect memory leaks and stability issues
 
 import json
 import os
-import subprocess
+import subprocess  # nosec B404
 import tempfile
 import time
 

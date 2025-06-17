@@ -20,11 +20,11 @@ import gc
 import os
 import sys
 import time
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from collections.abc import Callable
-from pathlib import Path
 
 import psutil  # type: ignore[import-untyped]
 from memory_profiler import profile  # type: ignore[import-not-found]
@@ -35,7 +35,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 import llm_task_framework  # type: ignore[import-untyped]
 
 
-@profile
+@profile  # type: ignore[misc]
 def test_framework_import() -> bool:
     """Test memory usage during framework import."""
     print("Testing framework import memory usage...")
@@ -50,7 +50,7 @@ def test_framework_import() -> bool:
     return True
 
 
-@profile
+@profile  # type: ignore[misc]
 def test_cli_memory() -> bool:
     """Test memory usage during CLI operations."""
     print("Testing CLI memory usage...")
@@ -75,7 +75,7 @@ def test_cli_memory() -> bool:
     return True
 
 
-@profile
+@profile  # type: ignore[misc]
 def test_mcp_server_memory() -> bool:
     """Test memory usage during MCP server operations."""
     print("Testing MCP server memory usage...")
@@ -95,7 +95,7 @@ def test_mcp_server_memory() -> bool:
     return True
 
 
-@profile
+@profile  # type: ignore[misc]
 def test_concurrent_operations_memory() -> bool:
     """Test memory usage during concurrent operations."""
     print("Testing concurrent operations memory usage...")
@@ -133,7 +133,7 @@ def test_concurrent_operations_memory() -> bool:
     return True
 
 
-@profile
+@profile  # type: ignore[misc]
 def test_memory_leaks() -> bool:
     """Test for potential memory leaks."""
     print("Testing for memory leaks...")
