@@ -23,11 +23,11 @@ import time
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-if TYPE_CHECKING:
-    from collections.abc import Callable
-
 import psutil  # type: ignore[import-untyped]
 from memory_profiler import profile  # type: ignore[import-not-found]
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 # Add src to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
