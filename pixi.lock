@@ -708,7 +708,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/e2/ba/77013b0b8ba904bf3762f11e0129b8928bff7f978a81838dfcc958ad5728/jiter-0.10.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/2d/14/1c65fccf8413d5f5c6e8425f84675169654395098000d8bddc4e9d3390e1/jsbeautifier-1.15.4-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/d3/32/da7f44bcb1105d3e88a0b74ebdca50c59121d2ddf71c9e34ba47df7f3a56/keyring-25.6.0-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/51/3f/afe76f8e2246ffbc867440cbcf90525264df0e658f8a5ca1f872b3f6192a/markdown-3.8-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/50/34/3d1ff0cb4843a33817d06800e9383a2b2a2df4d508e37f53a40e829905d9/markdown-3.8.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/42/d7/1ec15b46af6af88f19b8e5ffea08fa375d433c998b8a7639e76935c14f1f/markdown_it_py-3.0.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/f3/f0/89e7aadfb3749d0f52234a0c8c7867877876e0a20b60e2188e9850794c17/MarkupSafe-3.0.2-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/34/75/51952c7b2d3873b44a0028b1bd26a25078c18f92f256608e8d1dc61b39fd/marshmallow-3.26.1-py3-none-any.whl
@@ -828,7 +828,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/6d/b5/348b3313c58f5fbfb2194eb4d07e46a35748ba6e5b3b3046143f3040bafa/jiter-0.10.0-cp312-cp312-macosx_10_12_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/2d/14/1c65fccf8413d5f5c6e8425f84675169654395098000d8bddc4e9d3390e1/jsbeautifier-1.15.4-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/d3/32/da7f44bcb1105d3e88a0b74ebdca50c59121d2ddf71c9e34ba47df7f3a56/keyring-25.6.0-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/51/3f/afe76f8e2246ffbc867440cbcf90525264df0e658f8a5ca1f872b3f6192a/markdown-3.8-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/50/34/3d1ff0cb4843a33817d06800e9383a2b2a2df4d508e37f53a40e829905d9/markdown-3.8.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/42/d7/1ec15b46af6af88f19b8e5ffea08fa375d433c998b8a7639e76935c14f1f/markdown_it_py-3.0.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/22/09/d1f21434c97fc42f09d290cbb6350d44eb12f09cc62c9476effdb33a18aa/MarkupSafe-3.0.2-cp312-cp312-macosx_10_13_universal2.whl
       - pypi: https://files.pythonhosted.org/packages/34/75/51952c7b2d3873b44a0028b1bd26a25078c18f92f256608e8d1dc61b39fd/marshmallow-3.26.1-py3-none-any.whl
@@ -946,7 +946,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/9c/4a/6a2397096162b21645162825f058d1709a02965606e537e3304b02742e9b/jiter-0.10.0-cp312-cp312-macosx_11_0_arm64.whl
       - pypi: https://files.pythonhosted.org/packages/2d/14/1c65fccf8413d5f5c6e8425f84675169654395098000d8bddc4e9d3390e1/jsbeautifier-1.15.4-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/d3/32/da7f44bcb1105d3e88a0b74ebdca50c59121d2ddf71c9e34ba47df7f3a56/keyring-25.6.0-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/51/3f/afe76f8e2246ffbc867440cbcf90525264df0e658f8a5ca1f872b3f6192a/markdown-3.8-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/50/34/3d1ff0cb4843a33817d06800e9383a2b2a2df4d508e37f53a40e829905d9/markdown-3.8.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/42/d7/1ec15b46af6af88f19b8e5ffea08fa375d433c998b8a7639e76935c14f1f/markdown_it_py-3.0.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/6b/b0/18f76bba336fa5aecf79d45dcd6c806c280ec44538b3c13671d49099fdd0/MarkupSafe-3.0.2-cp312-cp312-macosx_11_0_arm64.whl
       - pypi: https://files.pythonhosted.org/packages/34/75/51952c7b2d3873b44a0028b1bd26a25078c18f92f256608e8d1dc61b39fd/marshmallow-3.26.1-py3-none-any.whl
@@ -1065,7 +1065,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/9b/52/7ec47455e26f2d6e5f2ea4951a0652c06e5b995c291f723973ae9e724a65/jiter-0.10.0-cp312-cp312-win_amd64.whl
       - pypi: https://files.pythonhosted.org/packages/2d/14/1c65fccf8413d5f5c6e8425f84675169654395098000d8bddc4e9d3390e1/jsbeautifier-1.15.4-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/d3/32/da7f44bcb1105d3e88a0b74ebdca50c59121d2ddf71c9e34ba47df7f3a56/keyring-25.6.0-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/51/3f/afe76f8e2246ffbc867440cbcf90525264df0e658f8a5ca1f872b3f6192a/markdown-3.8-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/50/34/3d1ff0cb4843a33817d06800e9383a2b2a2df4d508e37f53a40e829905d9/markdown-3.8.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/42/d7/1ec15b46af6af88f19b8e5ffea08fa375d433c998b8a7639e76935c14f1f/markdown_it_py-3.0.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/c1/80/a61f99dc3a936413c3ee4e1eecac96c0da5ed07ad56fd975f1a9da5bc630/MarkupSafe-3.0.2-cp312-cp312-win_amd64.whl
       - pypi: https://files.pythonhosted.org/packages/34/75/51952c7b2d3873b44a0028b1bd26a25078c18f92f256608e8d1dc61b39fd/marshmallow-3.26.1-py3-none-any.whl
@@ -1227,7 +1227,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/53/84/8a89614b2e7eeeaf0a68a4046d6cfaea4544c8619ea02595ebeec9b2bae3/license_expression-30.4.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/28/a7/e67f34d8c9c3a1ae20c348fe9f5b8bbc97f186c7792ba3214e8a8d57c093/locust-2.37.10-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/37/ff/9328101b6936f8f394464c371a9ac2c98294c5f5aa29292e83ca6f3a9709/locust_cloud-1.23.2-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/51/3f/afe76f8e2246ffbc867440cbcf90525264df0e658f8a5ca1f872b3f6192a/markdown-3.8-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/50/34/3d1ff0cb4843a33817d06800e9383a2b2a2df4d508e37f53a40e829905d9/markdown-3.8.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/42/d7/1ec15b46af6af88f19b8e5ffea08fa375d433c998b8a7639e76935c14f1f/markdown_it_py-3.0.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/f3/f0/89e7aadfb3749d0f52234a0c8c7867877876e0a20b60e2188e9850794c17/MarkupSafe-3.0.2-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/34/75/51952c7b2d3873b44a0028b1bd26a25078c18f92f256608e8d1dc61b39fd/marshmallow-3.26.1-py3-none-any.whl
@@ -1409,7 +1409,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/53/84/8a89614b2e7eeeaf0a68a4046d6cfaea4544c8619ea02595ebeec9b2bae3/license_expression-30.4.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/28/a7/e67f34d8c9c3a1ae20c348fe9f5b8bbc97f186c7792ba3214e8a8d57c093/locust-2.37.10-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/37/ff/9328101b6936f8f394464c371a9ac2c98294c5f5aa29292e83ca6f3a9709/locust_cloud-1.23.2-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/51/3f/afe76f8e2246ffbc867440cbcf90525264df0e658f8a5ca1f872b3f6192a/markdown-3.8-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/50/34/3d1ff0cb4843a33817d06800e9383a2b2a2df4d508e37f53a40e829905d9/markdown-3.8.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/42/d7/1ec15b46af6af88f19b8e5ffea08fa375d433c998b8a7639e76935c14f1f/markdown_it_py-3.0.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/22/09/d1f21434c97fc42f09d290cbb6350d44eb12f09cc62c9476effdb33a18aa/MarkupSafe-3.0.2-cp312-cp312-macosx_10_13_universal2.whl
       - pypi: https://files.pythonhosted.org/packages/34/75/51952c7b2d3873b44a0028b1bd26a25078c18f92f256608e8d1dc61b39fd/marshmallow-3.26.1-py3-none-any.whl
@@ -1590,7 +1590,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/53/84/8a89614b2e7eeeaf0a68a4046d6cfaea4544c8619ea02595ebeec9b2bae3/license_expression-30.4.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/28/a7/e67f34d8c9c3a1ae20c348fe9f5b8bbc97f186c7792ba3214e8a8d57c093/locust-2.37.10-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/37/ff/9328101b6936f8f394464c371a9ac2c98294c5f5aa29292e83ca6f3a9709/locust_cloud-1.23.2-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/51/3f/afe76f8e2246ffbc867440cbcf90525264df0e658f8a5ca1f872b3f6192a/markdown-3.8-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/50/34/3d1ff0cb4843a33817d06800e9383a2b2a2df4d508e37f53a40e829905d9/markdown-3.8.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/42/d7/1ec15b46af6af88f19b8e5ffea08fa375d433c998b8a7639e76935c14f1f/markdown_it_py-3.0.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/6b/b0/18f76bba336fa5aecf79d45dcd6c806c280ec44538b3c13671d49099fdd0/MarkupSafe-3.0.2-cp312-cp312-macosx_11_0_arm64.whl
       - pypi: https://files.pythonhosted.org/packages/34/75/51952c7b2d3873b44a0028b1bd26a25078c18f92f256608e8d1dc61b39fd/marshmallow-3.26.1-py3-none-any.whl
@@ -1772,7 +1772,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/53/84/8a89614b2e7eeeaf0a68a4046d6cfaea4544c8619ea02595ebeec9b2bae3/license_expression-30.4.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/28/a7/e67f34d8c9c3a1ae20c348fe9f5b8bbc97f186c7792ba3214e8a8d57c093/locust-2.37.10-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/37/ff/9328101b6936f8f394464c371a9ac2c98294c5f5aa29292e83ca6f3a9709/locust_cloud-1.23.2-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/51/3f/afe76f8e2246ffbc867440cbcf90525264df0e658f8a5ca1f872b3f6192a/markdown-3.8-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/50/34/3d1ff0cb4843a33817d06800e9383a2b2a2df4d508e37f53a40e829905d9/markdown-3.8.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/42/d7/1ec15b46af6af88f19b8e5ffea08fa375d433c998b8a7639e76935c14f1f/markdown_it_py-3.0.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/c1/80/a61f99dc3a936413c3ee4e1eecac96c0da5ed07ad56fd975f1a9da5bc630/MarkupSafe-3.0.2-cp312-cp312-win_amd64.whl
       - pypi: https://files.pythonhosted.org/packages/34/75/51952c7b2d3873b44a0028b1bd26a25078c18f92f256608e8d1dc61b39fd/marshmallow-3.26.1-py3-none-any.whl
@@ -5886,10 +5886,10 @@ packages:
   - python-socketio[client]==5.13.0
   - tomli>=1.1.0 ; python_full_version < '3.11'
   requires_python: '>=3.10'
-- pypi: https://files.pythonhosted.org/packages/51/3f/afe76f8e2246ffbc867440cbcf90525264df0e658f8a5ca1f872b3f6192a/markdown-3.8-py3-none-any.whl
+- pypi: https://files.pythonhosted.org/packages/50/34/3d1ff0cb4843a33817d06800e9383a2b2a2df4d508e37f53a40e829905d9/markdown-3.8.1-py3-none-any.whl
   name: markdown
-  version: '3.8'
-  sha256: 794a929b79c5af141ef5ab0f2f642d0f7b1872981250230e72682346f7cc90dc
+  version: 3.8.1
+  sha256: 46cc0c0f1e5211ab2e9d453582f0b28a1bfaf058a9f7d5c50386b99b588d8811
   requires_dist:
   - importlib-metadata>=4.4 ; python_full_version < '3.10'
   - coverage ; extra == 'testing'
