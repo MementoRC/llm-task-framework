@@ -564,11 +564,13 @@ class CIReporter:
             # Safe XML parsing for coverage data
             try:
                 from defusedxml.ElementTree import parse as safe_parse
+
                 tree = safe_parse(xml_file)
                 root = tree.getroot()
             except ImportError:
                 # Fallback to standard library with warning
                 import xml.etree.ElementTree as ET  # nosec B405
+
                 tree = ET.parse(xml_file)  # nosec B314
                 root = tree.getroot()
 

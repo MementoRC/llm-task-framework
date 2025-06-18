@@ -169,7 +169,8 @@ class TestTrendChartGenerator:
         """Test that chart generator requires matplotlib."""
         with (
             patch(
-                "llm_task_framework.reporting.trend_analyzer.MATPLOTLIB_AVAILABLE", False
+                "llm_task_framework.reporting.trend_analyzer.MATPLOTLIB_AVAILABLE",
+                False,
             ),
             pytest.raises(ImportError, match="matplotlib is required"),
         ):
