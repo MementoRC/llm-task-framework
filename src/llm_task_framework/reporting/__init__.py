@@ -2,15 +2,29 @@
 
 from .benchmark_analyzer import BenchmarkAnalyzer, RegressionDetector
 from .benchmark_reporter import BenchmarkReporter
-from .trend_analyzer import TrendAnalyzer, TrendDataStore, TrendChartGenerator
+from .ci_reporter import (
+    CIReporter,
+    CoverageData,
+    ExecutionTimes,
+    OptimizationRecommendations,
+    SecurityResults,
+    TestExecutionResults,
+)
 from .dashboard_generator import DashboardGenerator
+from .trend_analyzer import TrendAnalyzer, TrendChartGenerator, TrendDataStore
 
 __all__ = [
-    "BenchmarkAnalyzer", 
-    "BenchmarkReporter", 
+    "BenchmarkAnalyzer",
+    "BenchmarkReporter",
     "RegressionDetector",
     "TrendAnalyzer",
-    "TrendDataStore", 
+    "TrendDataStore",
     "TrendChartGenerator",
-    "DashboardGenerator"
+    "DashboardGenerator",
+    "CIReporter",
+    "TestExecutionResults",
+    "CoverageData",
+    "ExecutionTimes",
+    "SecurityResults",
+    "OptimizationRecommendations",
 ]

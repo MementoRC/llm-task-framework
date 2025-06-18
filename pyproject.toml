@@ -310,10 +310,16 @@ perf-memory = "python -m memory_profiler scripts/memory_test.py"
 perf-profile = "python -m cProfile -o reports/profile.stats -m pytest tests/"
 perf-all = { depends-on = ["perf-test"] }
 
+# CI reporting tasks
+ci-summary = "python scripts/generate_ci_summary.py --sample-data"
+ci-summary-real = "python scripts/generate_ci_summary.py --pytest-json reports/pytest-report.json --coverage-xml coverage.xml --reports-dir reports --github-step-summary"
+ci-summary-with-benchmarks = "python scripts/generate_ci_summary.py --pytest-json reports/pytest-report.json --coverage-xml coverage.xml --benchmark-json benchmark.json --reports-dir reports --metrics-json reports/ci-metrics.json"
+
 # Development workflow shortcuts
 dev-setup = { depends-on = ["install", "pre-commit-install"] }
 ci-local = { depends-on = ["format-check", "lint", "typecheck", "test-cov", "security-all"] }
 ci-comprehensive = { depends-on = ["ci-local", "perf-all"] }
+ci-report = { depends-on = ["ci-comprehensive", "ci-summary-real"] }
 
 # Development feature with all dev dependencies
 [tool.pixi.feature.dev.pypi-dependencies]
