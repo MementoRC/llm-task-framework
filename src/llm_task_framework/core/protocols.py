@@ -419,3 +419,81 @@ class LLMServiceError(TaskFrameworkError):
     """Error in LLM service operations."""
 
     pass
+
+
+# Service container protocols
+@runtime_checkable
+class ServiceContainer(Protocol):
+    """
+    Protocol for service containers that provide external service integration.
+
+    Service containers abstract away the complexity of connecting to and
+    managing external services like databases, message queues, APIs, etc.
+    They provide lifecycle management, health checking, and graceful degradation.
+    """
+
+    @property
+    def service_name(self) -> str:
+        """Get the name of the service this container manages."""
+        ...
+
+    @property
+    def is_healthy(self) -> bool:
+        """Check if the service is currently healthy and available."""
+        ...
+
+    async def connect(self) -> None:
+        """
+        Establish connection to the service.
+
+        Raises:
+            ServiceConnectionError: If connection fails
+        """
+        ...
+
+    async def disconnect(self) -> None:
+        """
+        Close connection to the service.
+
+        Should be idempotent and handle cases where connection is already closed.
+        """
+        ...
+
+    async def health_check(self) -> dict[str, Any]:
+        """
+        Perform detailed health check of the service.
+
+        Returns:
+            Dictionary containing health status and diagnostic information
+        """
+        ...
+
+    def get_client(self) -> Any:
+        """
+        Get the underlying client/connection object.
+
+        Returns:
+            The actual client object for the service
+
+        Raises:
+            ServiceNotAvailableError: If service is not connected or unhealthy
+        """
+        ...
+
+
+class ServiceContainerError(TaskFrameworkError):
+    """Base exception for service container errors."""
+
+    pass
+
+
+class ServiceConnectionError(ServiceContainerError):
+    """Error connecting to a service."""
+
+    pass
+
+
+class ServiceNotAvailableError(ServiceContainerError):
+    """Service is not available or unhealthy."""
+
+    pass

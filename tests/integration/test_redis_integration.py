@@ -305,3 +305,43 @@ def test_redis_error_handling():
     with pytest.raises(redis.ConnectionError):
         invalid_client = redis.Redis(host="invalid-host", port=6379, socket_timeout=1)
         invalid_client.ping()
+
+
+@pytest.mark.integration
+@pytest.mark.network
+def test_redis_service_container_demo(redis_service_container):
+    """Demonstrate using the new Redis service container."""
+    if redis_service_container is None:
+        pytest.skip("Redis service container not available")
+
+    # Test that the container is healthy
+    assert redis_service_container.is_healthy
+
+    # Get Redis clients from the container
+    sync_client = redis_service_container.get_sync_client()
+    async_client = redis_service_container.get_async_client()
+
+    # Test basic operations with sync client
+    sync_client.set("demo_key", "demo_value")
+    assert sync_client.get("demo_key") == "demo_value"
+
+    # Test basic operations with async client (we'll use sync wrapper for demo)
+    import asyncio
+    loop = asyncio.get_event_loop()
+
+    async def async_demo():
+        await async_client.set("async_demo_key", "async_demo_value")
+        result = await async_client.get("async_demo_key")
+        return result
+
+    result = loop.run_until_complete(async_demo())
+    assert result == "async_demo_value"
+
+    # Test health check
+    health_info = loop.run_until_complete(redis_service_container.health_check())
+    assert health_info["status"] == "healthy"
+    assert "redis_version" in health_info
+
+    # Clean up test data
+    sync_client.delete("demo_key")
+    loop.run_until_complete(async_client.delete("async_demo_key"))

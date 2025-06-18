@@ -172,6 +172,51 @@ def temp_project_dir() -> Generator[Path, None, None]:
 
 
 @pytest.fixture(scope="function")
+def redis_service_container() -> Generator[Any, None, None]:
+    """Provide a Redis service container for integration tests.
+    
+    Uses the new service container infrastructure for Redis integration.
+    """
+    from llm_task_framework.services import RedisServiceContainer
+
+    test_with_services = os.environ.get("TEST_WITH_SERVICES", "false").lower() == "true"
+
+    if not test_with_services:
+        pytest.skip(
+            "Service container testing disabled (TEST_WITH_SERVICES is not 'true')"
+        )
+
+    # Create Redis service container with test configuration
+    container = RedisServiceContainer(
+        redis_url=os.environ.get("REDIS_URL", "redis://localhost:6379"),
+        test_database=13,  # Use database 13 for service container tests
+        max_retries=3,
+        retry_delay=0.5,
+    )
+
+    try:
+        # Use asyncio to connect the container
+        import asyncio
+        asyncio.get_event_loop().run_until_complete(container.connect())
+        asyncio.get_event_loop().run_until_complete(container.select_test_database())
+        asyncio.get_event_loop().run_until_complete(container.flush_test_database())
+
+        yield container
+
+    except Exception as e:
+        pytest.skip(f"Redis service container connection failed: {e}")
+
+    finally:
+        # Cleanup
+        try:
+            import asyncio
+            asyncio.get_event_loop().run_until_complete(container.flush_test_database())
+            asyncio.get_event_loop().run_until_complete(container.disconnect())
+        except Exception as e:
+            warnings.warn(f"Redis service container cleanup failed: {e}", stacklevel=2)
+
+
+@pytest.fixture(scope="function")
 def redis_client() -> Generator[Any, None, None]:
     """Provide a Redis client for integration tests.
 
