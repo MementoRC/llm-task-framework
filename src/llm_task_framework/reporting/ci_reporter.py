@@ -596,7 +596,9 @@ class CIReporter:
         try:
             # Safe XML parsing for coverage data
             try:
-                from defusedxml.ElementTree import parse as safe_parse
+                from defusedxml.ElementTree import (
+                    parse as safe_parse,  # type: ignore[import-untyped]
+                )
 
                 tree = safe_parse(xml_file)
                 root = tree.getroot()
