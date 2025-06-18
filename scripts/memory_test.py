@@ -1,20 +1,6 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
-"""
-Memory profiling script for LLM Task Framework.
-
-This script tests memory usage patterns for:
-- Framework initialization
-- CLI operations
-- MCP server operations
-- Concurrent operations
-
-Usage:
-    python scripts/memory_test.py
-    python -m memory_profiler scripts/memory_test.py
-"""
-
 import concurrent.futures
 import gc
 import os
@@ -33,6 +19,20 @@ if TYPE_CHECKING:
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 import llm_task_framework  # type: ignore[import-untyped]
+
+"""
+Memory profiling script for LLM Task Framework.
+
+This script tests memory usage patterns for:
+- Framework initialization
+- CLI operations
+- MCP server operations
+- Concurrent operations
+
+Usage:
+    python scripts/memory_test.py
+    python -m memory_profiler scripts/memory_test.py
+"""
 
 
 @profile  # type: ignore[misc]

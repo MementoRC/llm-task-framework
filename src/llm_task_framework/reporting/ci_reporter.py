@@ -11,6 +11,7 @@ from typing import Any
 @dataclass
 class TestExecutionResults:
     """Test execution results summary."""
+
     total: int
     passed: int
     failed: int
@@ -36,6 +37,7 @@ class TestExecutionResults:
 @dataclass
 class CoverageData:
     """Code coverage metrics."""
+
     total: float
     line: float
     branch: float
@@ -59,6 +61,7 @@ class CoverageData:
 @dataclass
 class ExecutionTimes:
     """CI execution time breakdown."""
+
     total: float
     setup: float
     tests: float
@@ -69,20 +72,23 @@ class ExecutionTimes:
     def get_breakdown_percentages(self) -> dict[str, float]:
         """Get time breakdown as percentages."""
         if self.total == 0:
-            return dict.fromkeys(["setup", "tests", "quality_checks", "security_scans", "reporting"], 0.0)
+            return dict.fromkeys(
+                ["setup", "tests", "quality_checks", "security_scans", "reporting"], 0.0
+            )
 
         return {
             "setup": (self.setup / self.total) * 100,
             "tests": (self.tests / self.total) * 100,
             "quality_checks": (self.quality_checks / self.total) * 100,
             "security_scans": (self.security_scans / self.total) * 100,
-            "reporting": (self.reporting / self.total) * 100
+            "reporting": (self.reporting / self.total) * 100,
         }
 
 
 @dataclass
 class SecurityResults:
     """Security scan results summary."""
+
     bandit_issues: int = 0
     safety_vulnerabilities: int = 0
     pip_audit_vulnerabilities: int = 0
@@ -91,7 +97,12 @@ class SecurityResults:
     @property
     def total_issues(self) -> int:
         """Total security issues found."""
-        return self.bandit_issues + self.safety_vulnerabilities + self.pip_audit_vulnerabilities + self.secrets_detected
+        return (
+            self.bandit_issues
+            + self.safety_vulnerabilities
+            + self.pip_audit_vulnerabilities
+            + self.secrets_detected
+        )
 
     @property
     def security_status(self) -> str:
@@ -109,10 +120,13 @@ class SecurityResults:
 @dataclass
 class OptimizationRecommendations:
     """CI optimization recommendations."""
+
     recommendations: list[str]
     potential_time_savings: float = 0.0
 
-    def add_recommendation(self, recommendation: str, time_savings: float = 0.0) -> None:
+    def add_recommendation(
+        self, recommendation: str, time_savings: float = 0.0
+    ) -> None:
         """Add a new optimization recommendation."""
         self.recommendations.append(recommendation)
         self.potential_time_savings += time_savings
@@ -133,11 +147,11 @@ class CIReporter:
         execution_times: ExecutionTimes,
         security_results: SecurityResults | None = None,
         benchmark_results: dict[str, Any] | None = None,
-        environment_info: dict[str, str] | None = None
+        environment_info: dict[str, str] | None = None,
     ) -> str:
         """
         Generate comprehensive CI summary report.
-        
+
         Args:
             test_results: Test execution results
             coverage_data: Code coverage metrics
@@ -145,7 +159,7 @@ class CIReporter:
             security_results: Security scan results (optional)
             benchmark_results: Performance benchmark results (optional)
             environment_info: Environment information (optional)
-            
+
         Returns:
             Formatted markdown CI summary report
         """
@@ -155,7 +169,9 @@ class CIReporter:
         summary.append("# 🚀 CI Execution Summary\n")
 
         # Quick status overview
-        self._add_status_overview(summary, test_results, coverage_data, security_results)
+        self._add_status_overview(
+            summary, test_results, coverage_data, security_results
+        )
 
         # Test results section
         self._add_test_results_section(summary, test_results)
@@ -179,119 +195,161 @@ class CIReporter:
             self._add_environment_section(summary, environment_info)
 
         # Optimization recommendations
-        recommendations = self._generate_optimization_recommendations(execution_times, test_results)
+        recommendations = self._generate_optimization_recommendations(
+            execution_times, test_results
+        )
         self._add_optimization_section(summary, recommendations)
 
-        return '\n'.join(summary)
+        return "\n".join(summary)
 
     def _add_status_overview(
         self,
         summary: list[str],
         test_results: TestExecutionResults,
         coverage_data: CoverageData,
-        security_results: SecurityResults | None
+        security_results: SecurityResults | None,
     ) -> None:
         """Add quick status overview section."""
         summary.append("## 📊 Quick Status Overview\n")
 
         # Overall status
-        overall_status = "✅ PASSING" if test_results.failed == 0 and test_results.errors == 0 else "❌ FAILING"
-        coverage_status = f"📈 {coverage_data.coverage_grade} Grade" if coverage_data.total > 0 else "📉 No Coverage"
-        security_status = security_results.security_status if security_results else "🔍 Not Scanned"
+        overall_status = (
+            "✅ PASSING"
+            if test_results.failed == 0 and test_results.errors == 0
+            else "❌ FAILING"
+        )
+        coverage_status = (
+            f"📈 {coverage_data.coverage_grade} Grade"
+            if coverage_data.total > 0
+            else "📉 No Coverage"
+        )
+        security_status = (
+            security_results.security_status if security_results else "🔍 Not Scanned"
+        )
 
-        summary.extend([
-            f"**Overall Status:** {overall_status}",
-            f"**Test Success Rate:** {test_results.success_rate:.1f}%",
-            f"**Coverage Grade:** {coverage_status} ({coverage_data.total:.1f}%)",
-            f"**Security Status:** {security_status}",
-            ""
-        ])
+        summary.extend(
+            [
+                f"**Overall Status:** {overall_status}",
+                f"**Test Success Rate:** {test_results.success_rate:.1f}%",
+                f"**Coverage Grade:** {coverage_status} ({coverage_data.total:.1f}%)",
+                f"**Security Status:** {security_status}",
+                "",
+            ]
+        )
 
-    def _add_test_results_section(self, summary: list[str], test_results: TestExecutionResults) -> None:
+    def _add_test_results_section(
+        self, summary: list[str], test_results: TestExecutionResults
+    ) -> None:
         """Add detailed test results section."""
-        summary.extend([
-            "## 🧪 Test Results\n",
-            "| Metric | Count | Percentage |",
-            "|--------|-------|------------|",
-            f"| **Total Tests** | {test_results.total} | 100.0% |",
-            f"| **Passed** | {test_results.passed} | {test_results.success_rate:.1f}% |",
-            f"| **Failed** | {test_results.failed} | {(test_results.failed/test_results.total*100) if test_results.total > 0 else 0:.1f}% |",
-            f"| **Skipped** | {test_results.skipped} | {(test_results.skipped/test_results.total*100) if test_results.total > 0 else 0:.1f}% |",
-            f"| **Errors** | {test_results.errors} | {(test_results.errors/test_results.total*100) if test_results.total > 0 else 0:.1f}% |",
-            ""
-        ])
+        summary.extend(
+            [
+                "## 🧪 Test Results\n",
+                "| Metric | Count | Percentage |",
+                "|--------|-------|------------|",
+                f"| **Total Tests** | {test_results.total} | 100.0% |",
+                f"| **Passed** | {test_results.passed} | {test_results.success_rate:.1f}% |",
+                f"| **Failed** | {test_results.failed} | {(test_results.failed / test_results.total * 100) if test_results.total > 0 else 0:.1f}% |",
+                f"| **Skipped** | {test_results.skipped} | {(test_results.skipped / test_results.total * 100) if test_results.total > 0 else 0:.1f}% |",
+                f"| **Errors** | {test_results.errors} | {(test_results.errors / test_results.total * 100) if test_results.total > 0 else 0:.1f}% |",
+                "",
+            ]
+        )
 
         # Test health indicators
         if test_results.completion_rate < 90:
-            summary.append("⚠️ **High skip rate detected** - Consider reviewing skipped tests\n")
+            summary.append(
+                "⚠️ **High skip rate detected** - Consider reviewing skipped tests\n"
+            )
         if test_results.success_rate < 95:
             summary.append("🚨 **Low success rate** - Immediate attention required\n")
 
-    def _add_coverage_section(self, summary: list[str], coverage_data: CoverageData) -> None:
+    def _add_coverage_section(
+        self, summary: list[str], coverage_data: CoverageData
+    ) -> None:
         """Add code coverage analysis section."""
-        summary.extend([
-            "## 📈 Coverage Report\n",
-            "| Coverage Type | Percentage | Grade |",
-            "|---------------|------------|-------|",
-            f"| **Overall** | {coverage_data.total:.1f}% | {coverage_data.coverage_grade} |",
-            f"| **Line Coverage** | {coverage_data.line:.1f}% | - |",
-            f"| **Branch Coverage** | {coverage_data.branch:.1f}% | - |",
-            ""
-        ])
+        summary.extend(
+            [
+                "## 📈 Coverage Report\n",
+                "| Coverage Type | Percentage | Grade |",
+                "|---------------|------------|-------|",
+                f"| **Overall** | {coverage_data.total:.1f}% | {coverage_data.coverage_grade} |",
+                f"| **Line Coverage** | {coverage_data.line:.1f}% | - |",
+                f"| **Branch Coverage** | {coverage_data.branch:.1f}% | - |",
+                "",
+            ]
+        )
 
         if coverage_data.missing_lines > 0:
-            summary.append(f"📝 **Missing Lines:** {coverage_data.missing_lines} lines need coverage\n")
+            summary.append(
+                f"📝 **Missing Lines:** {coverage_data.missing_lines} lines need coverage\n"
+            )
 
         # Coverage recommendations
         if coverage_data.total < 80:
-            summary.append("🎯 **Recommendation:** Increase test coverage to reach 80% minimum threshold\n")
+            summary.append(
+                "🎯 **Recommendation:** Increase test coverage to reach 80% minimum threshold\n"
+            )
         elif coverage_data.total < 90:
-            summary.append("🎯 **Recommendation:** Target 90% coverage for production-ready code\n")
+            summary.append(
+                "🎯 **Recommendation:** Target 90% coverage for production-ready code\n"
+            )
 
-    def _add_execution_time_section(self, summary: list[str], execution_times: ExecutionTimes) -> None:
+    def _add_execution_time_section(
+        self, summary: list[str], execution_times: ExecutionTimes
+    ) -> None:
         """Add execution time analysis section."""
         breakdown = execution_times.get_breakdown_percentages()
 
-        summary.extend([
-            "## ⏱️ Execution Time Analysis\n",
-            f"**Total CI Time:** {execution_times.total:.2f}s ({execution_times.total/60:.1f} minutes)\n",
-            "| Phase | Time (s) | Percentage |",
-            "|-------|----------|------------|",
-            f"| **Setup** | {execution_times.setup:.2f}s | {breakdown['setup']:.1f}% |",
-            f"| **Tests** | {execution_times.tests:.2f}s | {breakdown['tests']:.1f}% |",
-            f"| **Quality Checks** | {execution_times.quality_checks:.2f}s | {breakdown['quality_checks']:.1f}% |",
-            f"| **Security Scans** | {execution_times.security_scans:.2f}s | {breakdown['security_scans']:.1f}% |",
-            f"| **Reporting** | {execution_times.reporting:.2f}s | {breakdown['reporting']:.1f}% |",
-            ""
-        ])
+        summary.extend(
+            [
+                "## ⏱️ Execution Time Analysis\n",
+                f"**Total CI Time:** {execution_times.total:.2f}s ({execution_times.total / 60:.1f} minutes)\n",
+                "| Phase | Time (s) | Percentage |",
+                "|-------|----------|------------|",
+                f"| **Setup** | {execution_times.setup:.2f}s | {breakdown['setup']:.1f}% |",
+                f"| **Tests** | {execution_times.tests:.2f}s | {breakdown['tests']:.1f}% |",
+                f"| **Quality Checks** | {execution_times.quality_checks:.2f}s | {breakdown['quality_checks']:.1f}% |",
+                f"| **Security Scans** | {execution_times.security_scans:.2f}s | {breakdown['security_scans']:.1f}% |",
+                f"| **Reporting** | {execution_times.reporting:.2f}s | {breakdown['reporting']:.1f}% |",
+                "",
+            ]
+        )
 
-    def _add_security_section(self, summary: list[str], security_results: SecurityResults) -> None:
+    def _add_security_section(
+        self, summary: list[str], security_results: SecurityResults
+    ) -> None:
         """Add security scan results section."""
-        summary.extend([
-            "## 🛡️ Security Scan Results\n",
-            f"**Overall Status:** {security_results.security_status}\n",
-            "| Scan Type | Issues Found |",
-            "|-----------|--------------|",
-            f"| **Static Analysis (Bandit)** | {security_results.bandit_issues} |",
-            f"| **Dependency Vulnerabilities (Safety)** | {security_results.safety_vulnerabilities} |",
-            f"| **Package Audit (pip-audit)** | {security_results.pip_audit_vulnerabilities} |",
-            f"| **Secrets Detection** | {security_results.secrets_detected} |",
-            f"| **Total Issues** | **{security_results.total_issues}** |",
-            ""
-        ])
+        summary.extend(
+            [
+                "## 🛡️ Security Scan Results\n",
+                f"**Overall Status:** {security_results.security_status}\n",
+                "| Scan Type | Issues Found |",
+                "|-----------|--------------|",
+                f"| **Static Analysis (Bandit)** | {security_results.bandit_issues} |",
+                f"| **Dependency Vulnerabilities (Safety)** | {security_results.safety_vulnerabilities} |",
+                f"| **Package Audit (pip-audit)** | {security_results.pip_audit_vulnerabilities} |",
+                f"| **Secrets Detection** | {security_results.secrets_detected} |",
+                f"| **Total Issues** | **{security_results.total_issues}** |",
+                "",
+            ]
+        )
 
         if security_results.total_issues > 0:
-            summary.append("🔍 **Action Required:** Review security artifacts for detailed issue reports\n")
+            summary.append(
+                "🔍 **Action Required:** Review security artifacts for detailed issue reports\n"
+            )
 
-    def _add_benchmark_section(self, summary: list[str], benchmark_results: dict[str, Any]) -> None:
+    def _add_benchmark_section(
+        self, summary: list[str], benchmark_results: dict[str, Any]
+    ) -> None:
         """Add performance benchmark results section."""
-        summary.extend([
-            "## 🏃 Performance Benchmarks\n"
-        ])
+        summary.extend(["## 🏃 Performance Benchmarks\n"])
 
         if "regressions" in benchmark_results and benchmark_results["regressions"]:
             regression_count = len(benchmark_results["regressions"])
-            summary.append(f"⚠️ **{regression_count} Performance Regression(s) Detected**\n")
+            summary.append(
+                f"⚠️ **{regression_count} Performance Regression(s) Detected**\n"
+            )
         else:
             summary.append("✅ **No Performance Regressions Detected**\n")
 
@@ -302,13 +360,17 @@ class CIReporter:
 
         summary.append("📋 See benchmark artifacts for detailed performance analysis\n")
 
-    def _add_environment_section(self, summary: list[str], environment_info: dict[str, str]) -> None:
+    def _add_environment_section(
+        self, summary: list[str], environment_info: dict[str, str]
+    ) -> None:
         """Add environment information section."""
-        summary.extend([
-            "## 🌍 Environment Information\n",
-            "| Component | Version/Value |",
-            "|-----------|---------------|"
-        ])
+        summary.extend(
+            [
+                "## 🌍 Environment Information\n",
+                "| Component | Version/Value |",
+                "|-----------|---------------|",
+            ]
+        )
 
         for key, value in environment_info.items():
             summary.append(f"| **{key.replace('_', ' ').title()}** | {value} |")
@@ -316,9 +378,7 @@ class CIReporter:
         summary.append("")
 
     def _generate_optimization_recommendations(
-        self,
-        execution_times: ExecutionTimes,
-        test_results: TestExecutionResults
+        self, execution_times: ExecutionTimes, test_results: TestExecutionResults
     ) -> OptimizationRecommendations:
         """Generate CI optimization recommendations based on metrics."""
         recommendations = OptimizationRecommendations([])
@@ -328,14 +388,14 @@ class CIReporter:
         if breakdown["setup"] > 30:
             recommendations.add_recommendation(
                 "🔧 **Setup Time High:** Consider improving dependency caching or using pre-built environments",
-                execution_times.setup * 0.3
+                execution_times.setup * 0.3,
             )
 
         # Test execution optimization
         if breakdown["tests"] > 60 and execution_times.total > 300:  # > 5 minutes
             recommendations.add_recommendation(
                 "🏃 **Test Suite Slow:** Consider parallel test execution or test suite optimization",
-                execution_times.tests * 0.25
+                execution_times.tests * 0.25,
             )
 
         # High skip rate
@@ -348,7 +408,7 @@ class CIReporter:
         if breakdown["security_scans"] > 20:
             recommendations.add_recommendation(
                 "🛡️ **Security Scans Slow:** Consider caching security databases or parallel scanning",
-                execution_times.security_scans * 0.2
+                execution_times.security_scans * 0.2,
             )
 
         # Overall CI time
@@ -359,18 +419,22 @@ class CIReporter:
 
         return recommendations
 
-    def _add_optimization_section(self, summary: list[str], recommendations: OptimizationRecommendations) -> None:
+    def _add_optimization_section(
+        self, summary: list[str], recommendations: OptimizationRecommendations
+    ) -> None:
         """Add optimization recommendations section."""
-        summary.extend([
-            "## 💡 Optimization Opportunities\n"
-        ])
+        summary.extend(["## 💡 Optimization Opportunities\n"])
 
         if not recommendations.recommendations:
-            summary.append("✅ **No immediate optimizations needed** - CI pipeline is performing well\n")
+            summary.append(
+                "✅ **No immediate optimizations needed** - CI pipeline is performing well\n"
+            )
             return
 
         if recommendations.potential_time_savings > 0:
-            summary.append(f"⏱️ **Potential Time Savings:** {recommendations.potential_time_savings:.1f}s\n")
+            summary.append(
+                f"⏱️ **Potential Time Savings:** {recommendations.potential_time_savings:.1f}s\n"
+            )
 
         for rec in recommendations.recommendations:
             summary.append(f"- {rec}")
@@ -378,13 +442,11 @@ class CIReporter:
         summary.append("")
 
     def save_summary_to_github_step(
-        self,
-        summary: str,
-        step_summary_file: str | None = None
+        self, summary: str, step_summary_file: str | None = None
     ) -> None:
         """
         Save CI summary to GitHub Actions step summary.
-        
+
         Args:
             summary: The CI summary content
             step_summary_file: Path to GitHub step summary file (defaults to GITHUB_STEP_SUMMARY env var)
@@ -400,14 +462,16 @@ class CIReporter:
         else:
             print("GitHub step summary file not available")
 
-    def save_summary_to_file(self, summary: str, filename: str = "ci-summary.md") -> Path:
+    def save_summary_to_file(
+        self, summary: str, filename: str = "ci-summary.md"
+    ) -> Path:
         """
         Save CI summary to a file in the reports directory.
-        
+
         Args:
             summary: The CI summary content
             filename: Output filename
-            
+
         Returns:
             Path to the saved file
         """
@@ -421,17 +485,17 @@ class CIReporter:
         test_results: TestExecutionResults,
         coverage_data: CoverageData,
         execution_times: ExecutionTimes,
-        security_results: SecurityResults | None = None
+        security_results: SecurityResults | None = None,
     ) -> dict[str, Any]:
         """
         Generate machine-readable metrics in JSON format.
-        
+
         Args:
             test_results: Test execution results
             coverage_data: Code coverage metrics
             execution_times: CI execution time breakdown
             security_results: Security scan results (optional)
-            
+
         Returns:
             Dictionary containing all CI metrics
         """
@@ -443,8 +507,8 @@ class CIReporter:
             "performance_metrics": {
                 "total_ci_time": execution_times.total,
                 "test_success_rate": test_results.success_rate,
-                "coverage_grade": coverage_data.coverage_grade
-            }
+                "coverage_grade": coverage_data.coverage_grade,
+            },
         }
 
         if security_results:
@@ -452,13 +516,15 @@ class CIReporter:
 
         return metrics
 
-    def load_test_results_from_pytest_json(self, json_file: Path) -> TestExecutionResults:
+    def load_test_results_from_pytest_json(
+        self, json_file: Path
+    ) -> TestExecutionResults:
         """
         Load test results from pytest JSON report.
-        
+
         Args:
             json_file: Path to pytest JSON report file
-            
+
         Returns:
             TestExecutionResults object
         """
@@ -475,7 +541,7 @@ class CIReporter:
                 passed=summary.get("passed", 0),
                 failed=summary.get("failed", 0),
                 skipped=summary.get("skipped", 0),
-                errors=summary.get("error", 0)
+                errors=summary.get("error", 0),
             )
         except (json.JSONDecodeError, KeyError) as e:
             print(f"Warning: Could not parse pytest JSON report: {e}")
@@ -484,10 +550,10 @@ class CIReporter:
     def load_coverage_from_xml(self, xml_file: Path) -> CoverageData:
         """
         Load coverage data from coverage XML report.
-        
+
         Args:
             xml_file: Path to coverage XML report file
-            
+
         Returns:
             CoverageData object
         """
@@ -495,10 +561,16 @@ class CIReporter:
             return CoverageData(0.0, 0.0, 0.0, 0)
 
         try:
-            # Simple XML parsing for coverage data
-            import xml.etree.ElementTree as ET
-            tree = ET.parse(xml_file)
-            root = tree.getroot()
+            # Safe XML parsing for coverage data
+            try:
+                from defusedxml.ElementTree import parse as safe_parse
+                tree = safe_parse(xml_file)
+                root = tree.getroot()
+            except ImportError:
+                # Fallback to standard library with warning
+                import xml.etree.ElementTree as ET  # nosec B405
+                tree = ET.parse(xml_file)  # nosec B314
+                root = tree.getroot()
 
             # Extract coverage percentages
             line_rate = float(root.get("line-rate", 0)) * 100
@@ -511,7 +583,7 @@ class CIReporter:
                 total=total_coverage,
                 line=line_rate,
                 branch=branch_rate,
-                missing_lines=0  # Would need more complex parsing
+                missing_lines=0,  # Would need more complex parsing
             )
         except Exception as e:
             print(f"Warning: Could not parse coverage XML report: {e}")
@@ -520,10 +592,10 @@ class CIReporter:
     def load_security_results_from_reports(self, reports_dir: Path) -> SecurityResults:
         """
         Load security results from multiple security report files.
-        
+
         Args:
             reports_dir: Directory containing security report files
-            
+
         Returns:
             SecurityResults object
         """
@@ -549,7 +621,9 @@ class CIReporter:
                 if isinstance(safety_data, list):
                     security_results.safety_vulnerabilities = len(safety_data)
                 elif isinstance(safety_data, dict):
-                    security_results.safety_vulnerabilities = len(safety_data.get("vulnerabilities", []))
+                    security_results.safety_vulnerabilities = len(
+                        safety_data.get("vulnerabilities", [])
+                    )
             except Exception as e:
                 print(f"Warning: Could not parse Safety report: {e}")
 
@@ -559,7 +633,9 @@ class CIReporter:
             try:
                 with open(pip_audit_file) as f:
                     pip_audit_data = json.load(f)
-                security_results.pip_audit_vulnerabilities = len(pip_audit_data.get("vulnerabilities", []))
+                security_results.pip_audit_vulnerabilities = len(
+                    pip_audit_data.get("vulnerabilities", [])
+                )
             except Exception as e:
                 print(f"Warning: Could not parse pip-audit report: {e}")
 

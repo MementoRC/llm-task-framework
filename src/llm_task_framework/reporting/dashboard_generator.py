@@ -5,62 +5,67 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from .trend_analyzer import TrendAnalyzer, MATPLOTLIB_AVAILABLE
+from .trend_analyzer import MATPLOTLIB_AVAILABLE, TrendAnalyzer
 
 
 class DashboardGenerator:
     """Generates HTML dashboard for performance trend visualization."""
-    
+
     def __init__(self, data_dir: str | Path = ".performance_trends"):
         """Initialize the dashboard generator.
-        
+
         Args:
             data_dir: Directory containing historical performance data
         """
         self.trend_analyzer = TrendAnalyzer(data_dir)
         self.data_dir = Path(data_dir)
-    
-    def generate_dashboard(self, output_path: str | Path, 
-                          benchmark_names: list[str] | None = None,
-                          include_charts: bool = True) -> None:
+
+    def generate_dashboard(
+        self,
+        output_path: str | Path,
+        benchmark_names: list[str] | None = None,
+        include_charts: bool = True,
+    ) -> None:
         """Generate a complete HTML dashboard.
-        
+
         Args:
             output_path: Path to save the HTML dashboard
             benchmark_names: List of benchmark names to include, or None for all
             include_charts: Whether to include trend charts (requires matplotlib)
         """
         output_path = Path(output_path)
-        
+
         # Get trend analysis
         analysis_results = self.trend_analyzer.analyze_trends(benchmark_names)
-        
+
         # Generate HTML content
         html_content = self._generate_html(analysis_results, include_charts)
-        
+
         # Write to file
-        with open(output_path, 'w') as f:
+        with open(output_path, "w") as f:
             f.write(html_content)
-    
-    def _generate_html(self, analysis_results: dict[str, Any], include_charts: bool) -> str:
+
+    def _generate_html(
+        self, analysis_results: dict[str, Any], include_charts: bool
+    ) -> str:
         """Generate the complete HTML dashboard content."""
         metadata = analysis_results["metadata"]
         trends = analysis_results["trends"]
-        
+
         # Generate charts if requested and available
         charts_html = ""
         if include_charts and MATPLOTLIB_AVAILABLE:
             charts_html = self._generate_charts_section(trends)
-        
+
         # Generate summary statistics
         summary_html = self._generate_summary_section(trends)
-        
+
         # Generate detailed table
         table_html = self._generate_trends_table(trends)
-        
+
         # Generate raw data section
         raw_data_html = self._generate_raw_data_section(analysis_results)
-        
+
         # Combine into full HTML
         html = f"""
 <!DOCTYPE html>
@@ -129,7 +134,7 @@ class DashboardGenerator:
         .improving {{ background: linear-gradient(135deg, #51cf66 0%, #40c057 100%); }}
         .stable {{ background: linear-gradient(135deg, #339af0 0%, #228be6 100%); }}
         .insufficient {{ background: linear-gradient(135deg, #9775fa 0%, #845ef7 100%); }}
-        
+
         .section {{
             margin-bottom: 40px;
         }}
@@ -141,7 +146,7 @@ class DashboardGenerator:
             align-items: center;
             gap: 10px;
         }}
-        
+
         table {{
             width: 100%;
             border-collapse: collapse;
@@ -164,7 +169,7 @@ class DashboardGenerator:
         tr:hover {{
             background-color: #f8f9fa;
         }}
-        
+
         .status-badge {{
             padding: 4px 8px;
             border-radius: 4px;
@@ -175,7 +180,7 @@ class DashboardGenerator:
         .status-improving {{ background: #efe; color: #2d7d32; }}
         .status-stable {{ background: #e3f2fd; color: #1976d2; }}
         .status-unknown {{ background: #f3e5f5; color: #7b1fa2; }}
-        
+
         .chart-container {{
             margin: 20px 0;
             text-align: center;
@@ -189,12 +194,12 @@ class DashboardGenerator:
             height: auto;
             border-radius: 4px;
         }}
-        
+
         .timestamp {{
             color: #6c757d;
             font-size: 0.9em;
         }}
-        
+
         .raw-data {{
             background: #f8f9fa;
             border: 1px solid #e9ecef;
@@ -204,7 +209,7 @@ class DashboardGenerator:
             font-size: 0.9em;
             overflow-x: auto;
         }}
-        
+
         .toggle-button {{
             background: #3498db;
             color: white;
@@ -218,11 +223,11 @@ class DashboardGenerator:
         .toggle-button:hover {{
             background: #2980b9;
         }}
-        
+
         .hidden {{
             display: none;
         }}
-        
+
         @media (max-width: 768px) {{
             .container {{
                 padding: 15px;
@@ -242,26 +247,26 @@ class DashboardGenerator:
         <div class="header">
             <h1>📈 Performance Trend Dashboard</h1>
             <p class="subtitle">
-                Generated on {datetime.now().strftime("%Y-%m-%d %H:%M:%S")} | 
-                Metric: {metadata['metric']} | 
-                History: {metadata['history_limit']} entries
+                Generated on {datetime.now().strftime("%Y-%m-%d %H:%M:%S")} |
+                Metric: {metadata["metric"]} |
+                History: {metadata["history_limit"]} entries
             </p>
         </div>
-        
+
         {summary_html}
-        
+
         {charts_html}
-        
+
         {table_html}
-        
+
         {raw_data_html}
     </div>
-    
+
     <script>
         function toggleRawData() {{
             const element = document.getElementById('raw-data-content');
             const button = document.getElementById('toggle-raw-data');
-            
+
             if (element.classList.contains('hidden')) {{
                 element.classList.remove('hidden');
                 button.textContent = 'Hide Raw Data';
@@ -274,17 +279,23 @@ class DashboardGenerator:
 </body>
 </html>
         """
-        
+
         return html
-    
+
     def _generate_summary_section(self, trends: dict[str, Any]) -> str:
         """Generate the summary statistics section."""
         total = len(trends)
-        degrading = sum(1 for t in trends.values() if t.get("trend_direction") == "degrading")
-        improving = sum(1 for t in trends.values() if t.get("trend_direction") == "improving")
+        degrading = sum(
+            1 for t in trends.values() if t.get("trend_direction") == "degrading"
+        )
+        improving = sum(
+            1 for t in trends.values() if t.get("trend_direction") == "improving"
+        )
         stable = sum(1 for t in trends.values() if t.get("trend_direction") == "stable")
-        insufficient = sum(1 for t in trends.values() if t.get("status") == "insufficient_data")
-        
+        insufficient = sum(
+            1 for t in trends.values() if t.get("status") == "insufficient_data"
+        )
+
         return f"""
         <div class="section">
             <h2>📊 Summary Statistics</h2>
@@ -312,31 +323,31 @@ class DashboardGenerator:
             </div>
         </div>
         """
-    
+
     def _generate_trends_table(self, trends: dict[str, Any]) -> str:
         """Generate the detailed trends table."""
         table_rows = ""
-        
+
         for name, trend in sorted(trends.items()):
             direction = trend.get("trend_direction", "unknown")
             confidence = trend.get("confidence", 0.0)
             change_ratio = trend.get("change_ratio", 0.0)
             data_points = trend.get("data_points", 0)
             latest_value = trend.get("latest_value")
-            
+
             # Status badge
             status_class = f"status-{direction}"
             status_emoji = {
                 "degrading": "❌",
                 "improving": "✅",
                 "stable": "➡️",
-                "unknown": "❔"
+                "unknown": "❔",
             }.get(direction, "❔")
-            
+
             change_str = f"{change_ratio:+.1%}" if change_ratio != 0 else "0.0%"
             confidence_str = f"{confidence:.1%}" if confidence > 0 else "N/A"
             latest_str = f"{latest_value:.6f}s" if latest_value is not None else "N/A"
-            
+
             table_rows += f"""
             <tr>
                 <td><code>{name}</code></td>
@@ -347,7 +358,7 @@ class DashboardGenerator:
                 <td>{data_points}</td>
             </tr>
             """
-        
+
         return f"""
         <div class="section">
             <h2>📈 Detailed Trends</h2>
@@ -368,7 +379,7 @@ class DashboardGenerator:
             </table>
         </div>
         """
-    
+
     def _generate_charts_section(self, trends: dict[str, Any]) -> str:
         """Generate the charts section with trend visualizations."""
         if not MATPLOTLIB_AVAILABLE:
@@ -379,19 +390,21 @@ class DashboardGenerator:
                 <p>Install matplotlib to enable trend visualization: <code>pip install matplotlib</code></p>
             </div>
             """
-        
+
         charts_html = """
         <div class="section">
             <h2>📊 Trend Charts</h2>
         """
-        
+
         # Generate charts for benchmarks with sufficient data
         chart_count = 0
         for name, trend in sorted(trends.items()):
             if trend.get("status") == "analyzed" and trend.get("data_points", 0) >= 2:
                 try:
                     # Get historical data for this benchmark
-                    history = self.trend_analyzer.data_store.get_benchmark_history(name, limit=50)
+                    history = self.trend_analyzer.data_store.get_benchmark_history(
+                        name, limit=50
+                    )
                     if len(history) >= 2:
                         if self.trend_analyzer.chart_generator is not None:
                             chart_data_url = self.trend_analyzer.chart_generator.generate_trend_chart(
@@ -399,7 +412,7 @@ class DashboardGenerator:
                             )
                         else:
                             continue
-                        
+
                         charts_html += f"""
                         <div class="chart-container">
                             <h3>{name}</h3>
@@ -407,20 +420,21 @@ class DashboardGenerator:
                         </div>
                         """
                         chart_count += 1
-                except Exception:
-                    # Skip charts that fail to generate
-                    continue
-        
+                except Exception as e:
+                    # Log the specific error and skip this chart
+                    print(f"Warning: Failed to generate chart for {name}: {e}")
+                    # Explicitly continue to next iteration
+
         if chart_count == 0:
             charts_html += "<p>No charts available. Need at least 2 data points per benchmark to generate trends.</p>"
-        
+
         charts_html += "</div>"
         return charts_html
-    
+
     def _generate_raw_data_section(self, analysis_results: dict[str, Any]) -> str:
         """Generate the raw data section."""
         raw_data_json = json.dumps(analysis_results, indent=2)
-        
+
         return f"""
         <div class="section">
             <h2>🔧 Raw Data</h2>
