@@ -9,8 +9,8 @@ import time
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-import psutil  # type: ignore[import-untyped]
-from memory_profiler import profile  # type: ignore[import-not-found]
+import psutil
+from memory_profiler import profile
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 # Add src to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-import llm_task_framework  # type: ignore[import-untyped]
+import llm_task_framework
 
 """
 Memory profiling script for LLM Task Framework.

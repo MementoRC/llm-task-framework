@@ -23,9 +23,9 @@ try:
 except ImportError:
     WEBSOCKETS_AVAILABLE = False
     websockets = None  # type: ignore[assignment]
-    WebSocketClientProtocol = Any  # type: ignore[misc]
-    ConnectionClosed = Exception  # type: ignore[misc,assignment]
-    WebSocketException = Exception  # type: ignore[misc,assignment]
+    WebSocketClientProtocol = Any  # type: ignore[assignment]
+    ConnectionClosed = Exception  # type: ignore[assignment,misc]
+    WebSocketException = Exception  # type: ignore[assignment,misc]
 
 # Use conservative parameters in CI to prevent timeouts
 IS_CI = os.getenv("CI", "false").lower() == "true"
@@ -58,8 +58,9 @@ async def websocket_client() -> AsyncGenerator[WebSocketClientProtocol | None, N
             client = await asyncio.wait_for(connect_coro, timeout=5.0)
 
             # Perform a quick ping-pong to ensure the connection is responsive
-            pong_waiter = await client.ping()
-            await asyncio.wait_for(pong_waiter, timeout=3.0)
+            if client is not None:
+                pong_waiter = await client.ping()
+                await asyncio.wait_for(pong_waiter, timeout=3.0)
 
             # If we got here, connection is good
             break
@@ -81,7 +82,11 @@ async def websocket_client() -> AsyncGenerator[WebSocketClientProtocol | None, N
         if client:
             from contextlib import suppress
 
-            from websockets.protocol import State
+            try:
+                from websockets.protocol import State
+            except ImportError:
+                # Fallback if websockets not available
+                return
 
             # Only try to close if connection is still open
             if hasattr(client, "state") and client.state == State.OPEN:
@@ -226,7 +231,7 @@ async def test_websocket_concurrent_connections():
                 message = f"Client {client_id} test message"
                 await websocket.send(message)
                 response = await asyncio.wait_for(websocket.recv(), timeout=3.0)
-                return response == message
+                return bool(response == message)
         except Exception:
             # Return False for connection failures - let the test handle it gracefully
             return False

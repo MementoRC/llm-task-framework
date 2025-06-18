@@ -327,6 +327,7 @@ def test_redis_service_container_demo(redis_service_container):
 
     # Test basic operations with async client (we'll use sync wrapper for demo)
     import asyncio
+
     loop = asyncio.get_event_loop()
 
     async def async_demo():

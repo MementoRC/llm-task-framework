@@ -169,7 +169,7 @@ class TestBenchmarkAnalyzer:
         assert analyzer.load_benchmark_data("non_existent_file.json") == []
 
         # Empty file - create a proper temporary file for cross-platform compatibility
-        empty_data = {"benchmarks": []}
+        empty_data: dict[str, list] = {"benchmarks": []}
         temp_file = create_temp_json_file(empty_data)
         temp_files.append(temp_file)
 

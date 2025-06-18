@@ -30,10 +30,10 @@ class RedisConfig:
     def from_env(cls, prefix: str = "REDIS_") -> "RedisConfig":
         """
         Create Redis configuration from environment variables.
-        
+
         Args:
             prefix: Environment variable prefix (default: "REDIS_")
-            
+
         Returns:
             RedisConfig instance with values from environment
         """
@@ -41,10 +41,19 @@ class RedisConfig:
             redis_url=os.environ.get(f"{prefix}URL", cls.redis_url),
             max_retries=int(os.environ.get(f"{prefix}MAX_RETRIES", cls.max_retries)),
             retry_delay=float(os.environ.get(f"{prefix}RETRY_DELAY", cls.retry_delay)),
-            connection_timeout=float(os.environ.get(f"{prefix}CONNECTION_TIMEOUT", cls.connection_timeout)),
-            socket_timeout=float(os.environ.get(f"{prefix}SOCKET_TIMEOUT", cls.socket_timeout)),
-            decode_responses=os.environ.get(f"{prefix}DECODE_RESPONSES", str(cls.decode_responses)).lower() == "true",
-            test_database=int(os.environ.get(f"{prefix}TEST_DATABASE", cls.test_database)),
+            connection_timeout=float(
+                os.environ.get(f"{prefix}CONNECTION_TIMEOUT", cls.connection_timeout)
+            ),
+            socket_timeout=float(
+                os.environ.get(f"{prefix}SOCKET_TIMEOUT", cls.socket_timeout)
+            ),
+            decode_responses=os.environ.get(
+                f"{prefix}DECODE_RESPONSES", str(cls.decode_responses)
+            ).lower()
+            == "true",
+            test_database=int(
+                os.environ.get(f"{prefix}TEST_DATABASE", cls.test_database)
+            ),
         )
 
 
@@ -63,17 +72,19 @@ class ServiceConfig:
     def from_dict(cls, data: dict[str, Any]) -> "ServiceConfig":
         """
         Create service configuration from dictionary.
-        
+
         Args:
             data: Configuration dictionary
-            
+
         Returns:
             ServiceConfig instance
         """
         return cls(
             enabled=data.get("enabled", cls.enabled),
             startup_priority=data.get("startup_priority", cls.startup_priority),
-            health_check_interval=data.get("health_check_interval", cls.health_check_interval),
+            health_check_interval=data.get(
+                "health_check_interval", cls.health_check_interval
+            ),
             startup_timeout=data.get("startup_timeout", cls.startup_timeout),
             shutdown_timeout=data.get("shutdown_timeout", cls.shutdown_timeout),
             retry_on_failure=data.get("retry_on_failure", cls.retry_on_failure),
@@ -92,35 +103,49 @@ class ServicesConfig:
     def from_env(cls) -> "ServicesConfig":
         """
         Create services configuration from environment variables.
-        
+
         Returns:
             ServicesConfig instance with values from environment
         """
         return cls(
             redis=RedisConfig.from_env(),
-            global_config=ServiceConfig.from_dict({
-                "enabled": os.environ.get("SERVICES_ENABLED", "true").lower() == "true",
-                "startup_priority": int(os.environ.get("SERVICES_STARTUP_PRIORITY", "0")),
-                "health_check_interval": float(os.environ.get("SERVICES_HEALTH_CHECK_INTERVAL", "30.0")),
-                "startup_timeout": float(os.environ.get("SERVICES_STARTUP_TIMEOUT", "30.0")),
-                "shutdown_timeout": float(os.environ.get("SERVICES_SHUTDOWN_TIMEOUT", "10.0")),
-                "retry_on_failure": os.environ.get("SERVICES_RETRY_ON_FAILURE", "true").lower() == "true",
-            }),
+            global_config=ServiceConfig.from_dict(
+                {
+                    "enabled": os.environ.get("SERVICES_ENABLED", "true").lower()
+                    == "true",
+                    "startup_priority": int(
+                        os.environ.get("SERVICES_STARTUP_PRIORITY", "0")
+                    ),
+                    "health_check_interval": float(
+                        os.environ.get("SERVICES_HEALTH_CHECK_INTERVAL", "30.0")
+                    ),
+                    "startup_timeout": float(
+                        os.environ.get("SERVICES_STARTUP_TIMEOUT", "30.0")
+                    ),
+                    "shutdown_timeout": float(
+                        os.environ.get("SERVICES_SHUTDOWN_TIMEOUT", "10.0")
+                    ),
+                    "retry_on_failure": os.environ.get(
+                        "SERVICES_RETRY_ON_FAILURE", "true"
+                    ).lower()
+                    == "true",
+                }
+            ),
         )
 
     @classmethod
     def from_file(cls, config_path: str | Path) -> "ServicesConfig":
         """
         Load services configuration from file.
-        
+
         Supports YAML and TOML formats.
-        
+
         Args:
             config_path: Path to configuration file
-            
+
         Returns:
             ServicesConfig instance loaded from file
-            
+
         Raises:
             FileNotFoundError: If configuration file doesn't exist
             ValueError: If configuration format is unsupported
@@ -145,10 +170,10 @@ class ServicesConfig:
     def from_dict(cls, data: dict[str, Any]) -> "ServicesConfig":
         """
         Create services configuration from dictionary.
-        
+
         Args:
             data: Configuration dictionary
-            
+
         Returns:
             ServicesConfig instance
         """
@@ -161,10 +186,18 @@ class ServicesConfig:
                 redis_url=redis_data.get("redis_url", config.redis.redis_url),
                 max_retries=redis_data.get("max_retries", config.redis.max_retries),
                 retry_delay=redis_data.get("retry_delay", config.redis.retry_delay),
-                connection_timeout=redis_data.get("connection_timeout", config.redis.connection_timeout),
-                socket_timeout=redis_data.get("socket_timeout", config.redis.socket_timeout),
-                decode_responses=redis_data.get("decode_responses", config.redis.decode_responses),
-                test_database=redis_data.get("test_database", config.redis.test_database),
+                connection_timeout=redis_data.get(
+                    "connection_timeout", config.redis.connection_timeout
+                ),
+                socket_timeout=redis_data.get(
+                    "socket_timeout", config.redis.socket_timeout
+                ),
+                decode_responses=redis_data.get(
+                    "decode_responses", config.redis.decode_responses
+                ),
+                test_database=redis_data.get(
+                    "test_database", config.redis.test_database
+                ),
             )
 
         # Load global service configuration
@@ -174,17 +207,19 @@ class ServicesConfig:
         # Load individual service configurations
         if "services" in data:
             for service_name, service_data in data["services"].items():
-                config.service_configs[service_name] = ServiceConfig.from_dict(service_data)
+                config.service_configs[service_name] = ServiceConfig.from_dict(
+                    service_data
+                )
 
         return config
 
     def get_service_config(self, service_name: str) -> ServiceConfig:
         """
         Get configuration for a specific service.
-        
+
         Args:
             service_name: Name of the service
-            
+
         Returns:
             ServiceConfig for the service, falls back to global config
         """
@@ -193,7 +228,7 @@ class ServicesConfig:
     def to_dict(self) -> dict[str, Any]:
         """
         Convert configuration to dictionary.
-        
+
         Returns:
             Dictionary representation of the configuration
         """
@@ -235,7 +270,7 @@ class ConfigurationManager:
     def __init__(self, config_file: str | Path | None = None):
         """
         Initialize configuration manager.
-        
+
         Args:
             config_file: Optional path to configuration file
         """
@@ -245,10 +280,10 @@ class ConfigurationManager:
     def load_config(self, force_reload: bool = False) -> ServicesConfig:
         """
         Load configuration with precedence: file -> environment -> defaults.
-        
+
         Args:
             force_reload: Force reload even if config is already loaded
-            
+
         Returns:
             Loaded ServicesConfig instance
         """
@@ -266,20 +301,23 @@ class ConfigurationManager:
                 config = self._merge_configs(config, file_config)
             except Exception as e:
                 import logging
+
                 logger = logging.getLogger(__name__)
                 logger.warning(f"Failed to load config file {self._config_file}: {e}")
 
         self._config = config
         return config
 
-    def _merge_configs(self, base: ServicesConfig, override: ServicesConfig) -> ServicesConfig:
+    def _merge_configs(
+        self, base: ServicesConfig, override: ServicesConfig
+    ) -> ServicesConfig:
         """
         Merge two configurations with override taking precedence.
-        
+
         Args:
             base: Base configuration
             override: Override configuration
-            
+
         Returns:
             Merged configuration
         """
@@ -304,7 +342,7 @@ class ConfigurationManager:
     def get_config(self) -> ServicesConfig:
         """
         Get current configuration, loading if necessary.
-        
+
         Returns:
             Current ServicesConfig instance
         """
@@ -313,7 +351,7 @@ class ConfigurationManager:
     def reload_config(self) -> ServicesConfig:
         """
         Force reload configuration from sources.
-        
+
         Returns:
             Reloaded ServicesConfig instance
         """
@@ -327,10 +365,10 @@ _global_config_manager: ConfigurationManager | None = None
 def get_config_manager(config_file: str | Path | None = None) -> ConfigurationManager:
     """
     Get the global configuration manager instance.
-    
+
     Args:
         config_file: Optional configuration file path (only used on first call)
-        
+
     Returns:
         Global ConfigurationManager instance
     """
@@ -343,7 +381,7 @@ def get_config_manager(config_file: str | Path | None = None) -> ConfigurationMa
 def get_services_config() -> ServicesConfig:
     """
     Get the current services configuration.
-    
+
     Returns:
         Current ServicesConfig instance
     """
@@ -353,7 +391,7 @@ def get_services_config() -> ServicesConfig:
 def reset_config_manager() -> None:
     """
     Reset the global configuration manager.
-    
+
     Useful for testing to ensure clean state.
     """
     global _global_config_manager

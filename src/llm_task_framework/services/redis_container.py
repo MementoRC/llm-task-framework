@@ -33,7 +33,7 @@ except ImportError:
 class RedisServiceContainer:
     """
     Redis service container with connection management and health checking.
-    
+
     Provides both synchronous and asynchronous Redis clients with automatic
     connection retry, health monitoring, and graceful degradation.
     """
@@ -61,9 +61,13 @@ class RedisServiceContainer:
             test_database: Database number to use for testing (default 15)
         """
         if not REDIS_AVAILABLE:
-            logger.warning("Redis library not available, service container will be disabled")
+            logger.warning(
+                "Redis library not available, service container will be disabled"
+            )
 
-        self._redis_url = redis_url or os.environ.get("REDIS_URL", "redis://localhost:6379")
+        self._redis_url = redis_url or os.environ.get(
+            "REDIS_URL", "redis://localhost:6379"
+        )
         self._max_retries = max_retries
         self._retry_delay = retry_delay
         self._connection_timeout = connection_timeout
@@ -102,7 +106,8 @@ class RedisServiceContainer:
                 self._sync_client.ping()
                 return True
         except Exception:
-            pass
+            # Redis connection failed - service is unhealthy
+            return False
 
         return False
 
@@ -148,12 +153,10 @@ class RedisServiceContainer:
 
             except Exception as e:
                 last_exception = e
-                logger.warning(
-                    f"Redis connection attempt {attempt + 1} failed: {e}"
-                )
+                logger.warning(f"Redis connection attempt {attempt + 1} failed: {e}")
 
                 if attempt < self._max_retries - 1:
-                    delay = self._retry_delay * (2 ** attempt)  # Exponential backoff
+                    delay = self._retry_delay * (2**attempt)  # Exponential backoff
                     await asyncio.sleep(delay)
                 else:
                     # Cleanup on final failure
@@ -166,7 +169,7 @@ class RedisServiceContainer:
     async def disconnect(self) -> None:
         """
         Close connection to Redis service.
-        
+
         Idempotent - safe to call multiple times.
         """
         await self._cleanup_clients()
@@ -235,7 +238,9 @@ class RedisServiceContainer:
                     health_info["redis_version"] = server_info.get("redis_version")
                     health_info["uptime_seconds"] = server_info.get("uptime_in_seconds")
                     health_info["memory_used"] = server_info.get("used_memory_human")
-                    health_info["connected_clients"] = server_info.get("connected_clients")
+                    health_info["connected_clients"] = server_info.get(
+                        "connected_clients"
+                    )
                 except Exception as e:
                     logger.debug(f"Could not retrieve Redis server info: {e}")
 
@@ -266,7 +271,9 @@ class RedisServiceContainer:
         client = self._async_client if async_client else self._sync_client
 
         if not client:
-            raise ServiceNotAvailableError("Redis client not initialized - call connect() first")
+            raise ServiceNotAvailableError(
+                "Redis client not initialized - call connect() first"
+            )
 
         return client
 
@@ -281,7 +288,7 @@ class RedisServiceContainer:
     async def select_test_database(self) -> None:
         """
         Select the test database for integration testing.
-        
+
         This is useful for isolation during testing.
         """
         if not self._sync_client:
@@ -291,12 +298,12 @@ class RedisServiceContainer:
             self._sync_client.select(self._test_database)
             logger.debug(f"Selected Redis test database {self._test_database}")
         except Exception as e:
-            raise ServiceConnectionError(f"Failed to select test database: {e}")
+            raise ServiceConnectionError(f"Failed to select test database: {e}") from e
 
     async def flush_test_database(self) -> None:
         """
         Flush the test database.
-        
+
         WARNING: This will delete all data in the test database.
         Only use for testing purposes.
         """
@@ -304,14 +311,16 @@ class RedisServiceContainer:
             raise ServiceNotAvailableError("Redis client not available")
 
         try:
-            current_db = self._sync_client.connection_pool.connection_kwargs.get("db", 0)
+            current_db = self._sync_client.connection_pool.connection_kwargs.get(
+                "db", 0
+            )
             if current_db != self._test_database:
                 await self.select_test_database()
 
             self._sync_client.flushdb()
             logger.debug(f"Flushed Redis test database {self._test_database}")
         except Exception as e:
-            raise ServiceConnectionError(f"Failed to flush test database: {e}")
+            raise ServiceConnectionError(f"Failed to flush test database: {e}") from e
 
     def __str__(self) -> str:
         """String representation of the Redis service container."""

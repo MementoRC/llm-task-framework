@@ -74,7 +74,9 @@ class TestRedisServiceContainerUnit:
         """Test that get_client raises error when Redis library is unavailable."""
         container = RedisServiceContainer()
 
-        with pytest.raises(ServiceNotAvailableError, match="Redis library not available"):
+        with pytest.raises(
+            ServiceNotAvailableError, match="Redis library not available"
+        ):
             container.get_client()
 
     def test_get_client_not_connected_raises_error(self):
@@ -82,7 +84,9 @@ class TestRedisServiceContainerUnit:
         with patch("llm_task_framework.services.redis_container.REDIS_AVAILABLE", True):
             container = RedisServiceContainer()
 
-            with pytest.raises(ServiceNotAvailableError, match="Redis client not initialized"):
+            with pytest.raises(
+                ServiceNotAvailableError, match="Redis client not initialized"
+            ):
                 container.get_client()
 
     def test_string_representations(self):
@@ -106,31 +110,33 @@ class TestRedisServiceContainerWithMocks:
     @pytest.fixture
     def mock_redis_module(self):
         """Mock Redis module and classes."""
-        with patch("llm_task_framework.services.redis_container.REDIS_AVAILABLE", True):
-            with patch("llm_task_framework.services.redis_container.redis") as mock_redis:
-                with patch("llm_task_framework.services.redis_container.async_redis") as mock_async_redis:
-                    # Setup mock sync client
-                    mock_sync_client = MagicMock()
-                    mock_sync_client.ping.return_value = True
-                    mock_sync_client.info.return_value = {
-                        "redis_version": "7.0.0",
-                        "uptime_in_seconds": 3600,
-                        "used_memory_human": "1M",
-                        "connected_clients": 2,
-                    }
-                    mock_redis.Redis.from_url.return_value = mock_sync_client
+        with (
+            patch("llm_task_framework.services.redis_container.REDIS_AVAILABLE", True),
+            patch("llm_task_framework.services.redis_container.redis") as mock_redis,
+            patch("llm_task_framework.services.redis_container.async_redis") as mock_async_redis,
+        ):
+            # Setup mock sync client
+            mock_sync_client = MagicMock()
+            mock_sync_client.ping.return_value = True
+            mock_sync_client.info.return_value = {
+                "redis_version": "7.0.0",
+                "uptime_in_seconds": 3600,
+                "used_memory_human": "1M",
+                "connected_clients": 2,
+            }
+            mock_redis.Redis.from_url.return_value = mock_sync_client
 
-                    # Setup mock async client
-                    mock_async_client = AsyncMock()
-                    mock_async_client.ping.return_value = True
-                    mock_async_redis.Redis.from_url.return_value = mock_async_client
+            # Setup mock async client
+            mock_async_client = AsyncMock()
+            mock_async_client.ping.return_value = True
+            mock_async_redis.Redis.from_url.return_value = mock_async_client
 
-                    yield {
-                        "redis": mock_redis,
-                        "async_redis": mock_async_redis,
-                        "sync_client": mock_sync_client,
-                        "async_client": mock_async_client,
-                    }
+            yield {
+                "redis": mock_redis,
+                "async_redis": mock_async_redis,
+                "sync_client": mock_sync_client,
+                "async_client": mock_async_client,
+            }
 
     async def test_successful_connect(self, mock_redis_module):
         """Test successful connection to Redis."""
@@ -176,7 +182,9 @@ class TestRedisServiceContainerWithMocks:
         # All attempts fail
         mock_redis_module["sync_client"].ping.side_effect = ConnectionError("Failed")
 
-        with pytest.raises(ServiceConnectionError, match="Failed to connect to Redis after 2 attempts"):
+        with pytest.raises(
+            ServiceConnectionError, match="Failed to connect to Redis after 2 attempts"
+        ):
             await container.connect()
 
         assert container._is_connected is False
@@ -212,7 +220,9 @@ class TestRedisServiceContainerWithMocks:
         await container.connect()
 
         # Make ping fail
-        mock_redis_module["sync_client"].ping.side_effect = ConnectionError("Connection failed")
+        mock_redis_module["sync_client"].ping.side_effect = ConnectionError(
+            "Connection failed"
+        )
 
         health_info = await container.health_check()
 
@@ -303,13 +313,19 @@ class TestRedisServiceContainerIntegration:
     @pytest.fixture
     def redis_container(self):
         """Create Redis container for integration tests."""
-        return RedisServiceContainer(test_database=14)  # Use different DB than conftest.py
+        return RedisServiceContainer(
+            test_database=14
+        )  # Use different DB than conftest.py
 
     async def test_full_lifecycle_with_real_redis(self, redis_container):
         """Test full lifecycle with real Redis if available."""
-        test_with_services = os.environ.get("TEST_WITH_SERVICES", "false").lower() == "true"
+        test_with_services = (
+            os.environ.get("TEST_WITH_SERVICES", "false").lower() == "true"
+        )
         if not test_with_services:
-            pytest.skip("Service container testing disabled (TEST_WITH_SERVICES is not 'true')")
+            pytest.skip(
+                "Service container testing disabled (TEST_WITH_SERVICES is not 'true')"
+            )
 
         try:
             # Test connection

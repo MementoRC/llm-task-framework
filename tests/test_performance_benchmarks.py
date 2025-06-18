@@ -37,7 +37,7 @@ class TestFrameworkBenchmarks:
                 if module_name in sys.modules:
                     del sys.modules[module_name]
 
-            import llm_task_framework  # type: ignore[import-untyped]
+            import llm_task_framework
 
             return llm_task_framework
 
@@ -112,7 +112,7 @@ class TestFrameworkBenchmarks:
 class TestCLIBenchmarks:
     """Benchmark tests for CLI functionality."""
 
-    @patch("sys.argv")  # type: ignore[misc]
+    @patch("sys.argv")
     @pytest.mark.benchmark
     def test_cli_argument_parsing_benchmark(self, mock_argv, benchmark):
         """Benchmark CLI argument parsing performance."""
@@ -358,7 +358,8 @@ class TestDataProcessingBenchmarks:
             # Process dataset
             processed_count = 0
             for record in dataset:
-                if len(record["values"]) > 50:
+                values = record["values"]
+                if len(values) > 50:
                     record["metadata"]["processed"] = True
                     processed_count += 1
 

@@ -38,7 +38,7 @@ async def auto_cleanup_async_resources() -> AsyncGenerator[None, None]:
 
     # Cleanup any pending aiohttp sessions if aiohttp is available
     try:
-        import aiohttp  # type: ignore[import-untyped]
+        import aiohttp
 
         # Close any unclosed client sessions
         connector = getattr(aiohttp, "_connector", None)
@@ -174,7 +174,7 @@ def temp_project_dir() -> Generator[Path, None, None]:
 @pytest.fixture(scope="function")
 def redis_service_container() -> Generator[Any, None, None]:
     """Provide a Redis service container for integration tests.
-    
+
     Uses the new service container infrastructure for Redis integration.
     """
     from llm_task_framework.services import RedisServiceContainer
@@ -197,6 +197,7 @@ def redis_service_container() -> Generator[Any, None, None]:
     try:
         # Use asyncio to connect the container
         import asyncio
+
         asyncio.get_event_loop().run_until_complete(container.connect())
         asyncio.get_event_loop().run_until_complete(container.select_test_database())
         asyncio.get_event_loop().run_until_complete(container.flush_test_database())
@@ -210,6 +211,7 @@ def redis_service_container() -> Generator[Any, None, None]:
         # Cleanup
         try:
             import asyncio
+
             asyncio.get_event_loop().run_until_complete(container.flush_test_database())
             asyncio.get_event_loop().run_until_complete(container.disconnect())
         except Exception as e:
@@ -223,9 +225,8 @@ def redis_client() -> Generator[Any, None, None]:
     Safely handles Redis connection with fallback strategies.
     Skips tests if Redis is not available.
     """
-    redis = None
     try:
-        import redis
+        import redis as redis_module
     except ImportError:
         pytest.skip("redis library not installed")
 
@@ -241,7 +242,7 @@ def redis_client() -> Generator[Any, None, None]:
     last_exception = None
     try:
         # Create Redis client with increased timeout for CI environments
-        client = redis.Redis.from_url(
+        client = redis_module.Redis.from_url(
             redis_url, decode_responses=True, socket_connect_timeout=5, socket_timeout=5
         )
 
@@ -250,7 +251,7 @@ def redis_client() -> Generator[Any, None, None]:
             try:
                 client.ping()
                 break  # Success
-            except (redis.ConnectionError, redis.TimeoutError) as e:
+            except (redis_module.ConnectionError, redis_module.TimeoutError) as e:
                 last_exception = e
                 if attempt == 2:
                     raise
@@ -262,7 +263,11 @@ def redis_client() -> Generator[Any, None, None]:
 
         yield client
 
-    except (redis.ConnectionError, redis.TimeoutError, ConnectionRefusedError) as e:
+    except (
+        redis_module.ConnectionError,
+        redis_module.TimeoutError,
+        ConnectionRefusedError,
+    ) as e:
         pytest.skip(f"Redis connection failed after retries: {last_exception or e}")
 
     finally:

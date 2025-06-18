@@ -16,12 +16,12 @@ logger = logging.getLogger(__name__)
 class ServiceRegistry:
     """
     Central registry for managing service containers.
-    
+
     Provides service discovery, lifecycle management, health monitoring,
     and graceful degradation for all registered service containers.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the service registry."""
         self._services: dict[str, ServiceContainer] = {}
         self._service_configs: dict[str, dict[str, Any]] = {}
@@ -56,7 +56,9 @@ class ServiceRegistry:
         self._startup_order = [s for s in self._startup_order if s != service_name]
         inserted = False
         for i, existing_service in enumerate(self._startup_order):
-            existing_priority = self._service_configs[existing_service].get("startup_priority", 0)
+            existing_priority = self._service_configs[existing_service].get(
+                "startup_priority", 0
+            )
             if startup_priority < existing_priority:
                 self._startup_order.insert(i, service_name)
                 inserted = True
@@ -65,7 +67,9 @@ class ServiceRegistry:
         if not inserted:
             self._startup_order.append(service_name)
 
-        logger.info(f"Registered service '{service_name}' with priority {startup_priority}")
+        logger.info(
+            f"Registered service '{service_name}' with priority {startup_priority}"
+        )
 
     def unregister(self, service_name: str) -> None:
         """
@@ -364,7 +368,7 @@ def get_service_registry() -> ServiceRegistry:
 def reset_service_registry() -> None:
     """
     Reset the global service registry.
-    
+
     Useful for testing to ensure clean state.
     """
     global _global_registry
