@@ -2,10 +2,41 @@
 
 import json
 import os
+import sys
 import time
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
+
+
+def _ensure_windows_compatible_text(text: str) -> str:
+    """Ensure text is compatible with Windows encodings by replacing problematic Unicode."""
+    if sys.platform == "win32":
+        # Replace Unicode emojis with ASCII equivalents for Windows compatibility
+        emoji_replacements = {
+            "🚀": "CI",
+            "📊": "Status",
+            "📈": "Coverage",
+            "✅": "[PASS]",
+            "❌": "[FAIL]",
+            "⚠️": "[WARN]",
+            "🔍": "Analysis",
+            "🛡️": "Security",
+            "💡": "Optimization",
+            "🎉": "Success",
+            "🎯": "Target",
+            "🔧": "Fix",
+            "📝": "Report",
+            "📋": "Summary",
+            "⏱️": "Time",
+            "🏃": "Performance",
+            "🌍": "Environment",
+            "🔥": "Critical",
+            "🚨": "Alert",
+        }
+        for emoji, replacement in emoji_replacements.items():
+            text = text.replace(emoji, replacement)
+    return text
 
 
 @dataclass
@@ -200,7 +231,9 @@ class CIReporter:
         )
         self._add_optimization_section(summary, recommendations)
 
-        return "\n".join(summary)
+        # Ensure Windows compatibility
+        result = "\n".join(summary)
+        return _ensure_windows_compatible_text(result)
 
     def _add_status_overview(
         self,

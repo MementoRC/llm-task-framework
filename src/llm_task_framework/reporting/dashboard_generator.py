@@ -1,11 +1,33 @@
 """Dashboard generator for performance trend visualization."""
 
 import json
+import sys
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 
 from .trend_analyzer import MATPLOTLIB_AVAILABLE, TrendAnalyzer
+
+
+def _ensure_windows_compatible_html(text: str) -> str:
+    """Ensure HTML text is compatible with Windows encodings by replacing problematic Unicode."""
+    if sys.platform == "win32":
+        # Replace Unicode emojis with HTML entities or ASCII equivalents for Windows compatibility
+        emoji_replacements = {
+            "📈": "&uarr;",  # Up arrow
+            "📊": "&#128202;",  # Bar chart
+            "🎯": "&#127919;",  # Target
+            "⚡": "&#9889;",  # Lightning
+            "🔥": "&#128293;",  # Fire
+            "📋": "&#128203;",  # Clipboard
+            "🎉": "&#127881;",  # Party
+            "✅": "&#9989;",  # Check mark
+            "❌": "&#10060;",  # Cross mark
+            "⚠️": "&#9888;",  # Warning
+        }
+        for emoji, replacement in emoji_replacements.items():
+            text = text.replace(emoji, replacement)
+    return text
 
 
 class DashboardGenerator:
@@ -280,7 +302,7 @@ class DashboardGenerator:
 </html>
         """
 
-        return html
+        return _ensure_windows_compatible_html(html)
 
     def _generate_summary_section(self, trends: dict[str, Any]) -> str:
         """Generate the summary statistics section."""
@@ -296,7 +318,7 @@ class DashboardGenerator:
             1 for t in trends.values() if t.get("status") == "insufficient_data"
         )
 
-        return f"""
+        html = f"""
         <div class="section">
             <h2>📊 Summary Statistics</h2>
             <div class="summary-grid">
@@ -323,6 +345,7 @@ class DashboardGenerator:
             </div>
         </div>
         """
+        return _ensure_windows_compatible_html(html)
 
     def _generate_trends_table(self, trends: dict[str, Any]) -> str:
         """Generate the detailed trends table."""
@@ -359,7 +382,7 @@ class DashboardGenerator:
             </tr>
             """
 
-        return f"""
+        html = f"""
         <div class="section">
             <h2>📈 Detailed Trends</h2>
             <table>
@@ -379,17 +402,19 @@ class DashboardGenerator:
             </table>
         </div>
         """
+        return _ensure_windows_compatible_html(html)
 
     def _generate_charts_section(self, trends: dict[str, Any]) -> str:
         """Generate the charts section with trend visualizations."""
         if not MATPLOTLIB_AVAILABLE:
-            return """
+            html = """
             <div class="section">
                 <h2>📊 Trend Charts</h2>
                 <p>Charts are not available because matplotlib is not installed.</p>
                 <p>Install matplotlib to enable trend visualization: <code>pip install matplotlib</code></p>
             </div>
             """
+            return _ensure_windows_compatible_html(html)
 
         charts_html = """
         <div class="section">
@@ -429,13 +454,13 @@ class DashboardGenerator:
             charts_html += "<p>No charts available. Need at least 2 data points per benchmark to generate trends.</p>"
 
         charts_html += "</div>"
-        return charts_html
+        return _ensure_windows_compatible_html(charts_html)
 
     def _generate_raw_data_section(self, analysis_results: dict[str, Any]) -> str:
         """Generate the raw data section."""
         raw_data_json = json.dumps(analysis_results, indent=2)
 
-        return f"""
+        html = f"""
         <div class="section">
             <h2>🔧 Raw Data</h2>
             <p>Complete analysis results in JSON format for debugging and integration.</p>
@@ -445,3 +470,4 @@ class DashboardGenerator:
             </div>
         </div>
         """
+        return _ensure_windows_compatible_html(html)
