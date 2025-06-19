@@ -24,8 +24,8 @@ except ImportError:
     WEBSOCKETS_AVAILABLE = False
     websockets = None  # type: ignore[assignment]
     WebSocketClientProtocol = Any  # type: ignore[assignment]
-    ConnectionClosed = Exception  # type: ignore[assignment,misc]
-    WebSocketException = Exception  # type: ignore[assignment,misc]
+    ConnectionClosed = Exception  # type: ignore[assignment]
+    WebSocketException = Exception  # type: ignore[assignment]
 
 # Use conservative parameters in CI to prevent timeouts
 IS_CI = os.getenv("CI", "false").lower() == "true"

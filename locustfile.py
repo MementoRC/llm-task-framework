@@ -28,14 +28,14 @@ import tempfile
 import time
 from typing import Any
 
-from locust import (  # type: ignore[import-not-found]
+from locust import (
     TaskSet,
     User,
     between,
     events,
     task,
 )
-from locust.env import Environment  # type: ignore[import-not-found]
+from locust.env import Environment
 
 
 class FrameworkTaskSet(TaskSet):
