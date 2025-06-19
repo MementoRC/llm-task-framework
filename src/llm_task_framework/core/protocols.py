@@ -53,7 +53,7 @@ class TaskExtractor(Protocol):
         Raises:
             ExtractionError: If extraction fails
         """
-        ...
+        pass
 
 
 @runtime_checkable
@@ -79,7 +79,7 @@ class TaskAnalyzer(Protocol):
         Raises:
             AnalysisError: If analysis fails
         """
-        ...
+        pass
 
 
 @runtime_checkable
@@ -105,7 +105,7 @@ class TaskSuggester(Protocol):
         Raises:
             SuggestionError: If suggestion generation fails
         """
-        ...
+        pass
 
 
 @runtime_checkable
@@ -136,7 +136,7 @@ class TaskApplier(Protocol):
         Raises:
             ApplicationError: If application fails
         """
-        ...
+        pass
 
 
 # Task orchestration protocols
@@ -165,7 +165,7 @@ class TaskExecutor(Protocol):
         Raises:
             TaskExecutionError: If task execution fails
         """
-        ...
+        pass
 
 
 @runtime_checkable
@@ -190,7 +190,7 @@ class TaskValidator(Protocol):
         Raises:
             ValidationError: If validation fails critically
         """
-        ...
+        pass
 
     def validate_result(self, result: TaskResult) -> dict[str, Any]:
         """
@@ -205,7 +205,7 @@ class TaskValidator(Protocol):
         Raises:
             ValidationError: If validation fails critically
         """
-        ...
+        pass
 
 
 # LLM service protocol
@@ -240,7 +240,7 @@ class LLMService(Protocol):
         Raises:
             LLMServiceError: If generation fails
         """
-        ...
+        pass
 
     async def generate_completion_async(
         self,
@@ -264,7 +264,7 @@ class LLMService(Protocol):
         Raises:
             LLMServiceError: If generation fails
         """
-        ...
+        pass
 
 
 # State machine protocols (for complex workflows)
@@ -275,15 +275,15 @@ class TaskState(Protocol):
     @property
     def name(self) -> str:
         """Get the name of the state."""
-        ...
+        pass
 
     def on_enter(self, context: dict[str, Any]) -> None:
         """Execute actions when entering the state."""
-        ...
+        pass
 
     def on_exit(self, context: dict[str, Any]) -> None:
         """Execute actions when exiting the state."""
-        ...
+        pass
 
 
 @runtime_checkable
@@ -293,7 +293,7 @@ class TaskStateMachine(Protocol):
     @property
     def current_state(self) -> TaskState:
         """Get the current state."""
-        ...
+        pass
 
     def trigger(self, trigger_name: str, **kwargs: Any) -> bool:
         """
@@ -306,7 +306,7 @@ class TaskStateMachine(Protocol):
         Returns:
             True if transition was successful, False otherwise
         """
-        ...
+        pass
 
 
 # Task configuration and metadata
@@ -344,32 +344,32 @@ class TaskDefinition(Protocol):
     @property
     def metadata(self) -> TaskMetadata:
         """Get task metadata."""
-        ...
+        pass
 
     @property
     def extractor(self) -> TaskExtractor:
         """Get the task extractor."""
-        ...
+        pass
 
     @property
     def analyzer(self) -> TaskAnalyzer:
         """Get the task analyzer."""
-        ...
+        pass
 
     @property
     def suggester(self) -> TaskSuggester:
         """Get the task suggester."""
-        ...
+        pass
 
     @property
     def applier(self) -> TaskApplier:
         """Get the task applier."""
-        ...
+        pass
 
     @property
     def validator(self) -> TaskValidator | None:
         """Get the task validator (optional)."""
-        ...
+        pass
 
 
 # Error types
@@ -436,13 +436,11 @@ class ServiceContainer(Protocol):
     @abstractmethod
     def service_name(self) -> str:
         """Get the name of the service this container manages."""
-        ...
 
     @property
     @abstractmethod
     def is_healthy(self) -> bool:
         """Check if the service is currently healthy and available."""
-        ...
 
     @abstractmethod
     async def connect(self) -> None:
@@ -452,7 +450,6 @@ class ServiceContainer(Protocol):
         Raises:
             ServiceConnectionError: If connection fails
         """
-        ...
 
     @abstractmethod
     async def disconnect(self) -> None:
@@ -461,7 +458,6 @@ class ServiceContainer(Protocol):
 
         Should be idempotent and handle cases where connection is already closed.
         """
-        ...
 
     @abstractmethod
     async def health_check(self) -> dict[str, Any]:
@@ -471,7 +467,6 @@ class ServiceContainer(Protocol):
         Returns:
             Dictionary containing health status and diagnostic information
         """
-        ...
 
     @abstractmethod
     def get_client(self) -> Any:
@@ -484,7 +479,6 @@ class ServiceContainer(Protocol):
         Raises:
             ServiceNotAvailableError: If service is not connected or unhealthy
         """
-        ...
 
 
 class ServiceContainerError(TaskFrameworkError):
