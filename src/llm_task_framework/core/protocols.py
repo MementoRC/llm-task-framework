@@ -433,15 +433,18 @@ class ServiceContainer(Protocol):
     """
 
     @property
+    @abstractmethod
     def service_name(self) -> str:
         """Get the name of the service this container manages."""
         ...
 
     @property
+    @abstractmethod
     def is_healthy(self) -> bool:
         """Check if the service is currently healthy and available."""
         ...
 
+    @abstractmethod
     async def connect(self) -> None:
         """
         Establish connection to the service.
@@ -451,6 +454,7 @@ class ServiceContainer(Protocol):
         """
         ...
 
+    @abstractmethod
     async def disconnect(self) -> None:
         """
         Close connection to the service.
@@ -459,6 +463,7 @@ class ServiceContainer(Protocol):
         """
         ...
 
+    @abstractmethod
     async def health_check(self) -> dict[str, Any]:
         """
         Perform detailed health check of the service.
@@ -468,6 +473,7 @@ class ServiceContainer(Protocol):
         """
         ...
 
+    @abstractmethod
     def get_client(self) -> Any:
         """
         Get the underlying client/connection object.
