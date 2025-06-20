@@ -196,11 +196,10 @@ def redis_service_container() -> Generator[Any, None, None]:
 
     try:
         # Use asyncio to connect the container
-        import asyncio
-
-        asyncio.get_event_loop().run_until_complete(container.connect())
-        asyncio.get_event_loop().run_until_complete(container.select_test_database())
-        asyncio.get_event_loop().run_until_complete(container.flush_test_database())
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(container.connect())
+        loop.run_until_complete(container.select_test_database())
+        loop.run_until_complete(container.flush_test_database())
 
         yield container
 
@@ -210,10 +209,9 @@ def redis_service_container() -> Generator[Any, None, None]:
     finally:
         # Cleanup
         try:
-            import asyncio
-
-            asyncio.get_event_loop().run_until_complete(container.flush_test_database())
-            asyncio.get_event_loop().run_until_complete(container.disconnect())
+            loop = asyncio.get_event_loop()
+            loop.run_until_complete(container.flush_test_database())
+            loop.run_until_complete(container.disconnect())
         except Exception as e:
             warnings.warn(f"Redis service container cleanup failed: {e}", stacklevel=2)
 
@@ -227,6 +225,9 @@ def redis_client() -> Generator[Any, None, None]:
     """
     try:
         import redis as redis_module
+
+        RedisConnectionError = redis_module.ConnectionError
+        RedisTimeoutError = redis_module.TimeoutError
     except ImportError:
         pytest.skip("redis library not installed")
 
@@ -251,7 +252,7 @@ def redis_client() -> Generator[Any, None, None]:
             try:
                 client.ping()
                 break  # Success
-            except (redis_module.ConnectionError, redis_module.TimeoutError) as e:
+            except (RedisConnectionError, RedisTimeoutError) as e:
                 last_exception = e
                 if attempt == 2:
                     raise
@@ -264,8 +265,8 @@ def redis_client() -> Generator[Any, None, None]:
         yield client
 
     except (
-        redis_module.ConnectionError,
-        redis_module.TimeoutError,
+        RedisConnectionError,
+        RedisTimeoutError,
         ConnectionRefusedError,
     ) as e:
         pytest.skip(f"Redis connection failed after retries: {last_exception or e}")

@@ -18,6 +18,7 @@ try:
     import websockets
     from websockets.client import WebSocketClientProtocol
     from websockets.exceptions import ConnectionClosed, WebSocketException
+    from websockets.protocol import State
 
     WEBSOCKETS_AVAILABLE = True
 except ImportError:
@@ -26,6 +27,7 @@ except ImportError:
     WebSocketClientProtocol = Any  # type: ignore[assignment]
     ConnectionClosed = Exception  # type: ignore[assignment]
     WebSocketException = Exception  # type: ignore[assignment]
+    State = object()  # Dummy object for type checking and attribute access
 
 # Use conservative parameters in CI to prevent timeouts
 IS_CI = os.getenv("CI", "false").lower() == "true"
@@ -79,14 +81,8 @@ async def websocket_client() -> AsyncGenerator[WebSocketClientProtocol | None, N
     try:
         yield client
     finally:
-        if client:
+        if client and WEBSOCKETS_AVAILABLE:
             from contextlib import suppress
-
-            try:
-                from websockets.protocol import State
-            except ImportError:
-                # Fallback if websockets not available
-                return
 
             # Only try to close if connection is still open
             if hasattr(client, "state") and client.state == State.OPEN:

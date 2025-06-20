@@ -202,18 +202,17 @@ def test_redis_fallback_when_unavailable():
         # An attempt to use it should result in an ImportError.
         with pytest.raises(ImportError):
             raise ImportError("Simulating redis not being available")
-        return
+    else:
+        # Test the scenario where redis is installed but the server is unreachable.
+        # Mock Redis to raise a connection error.
+        with patch("redis.Redis.from_url") as mock_redis:
+            mock_redis.side_effect = redis.ConnectionError("Connection refused")
 
-    # Test the scenario where redis is installed but the server is unreachable.
-    # Mock Redis to raise a connection error.
-    with patch("redis.Redis.from_url") as mock_redis:
-        mock_redis.side_effect = redis.ConnectionError("Connection refused")
+            redis_url = os.getenv("REDIS_URL", "redis://localhost:6379")
 
-        redis_url = os.getenv("REDIS_URL", "redis://localhost:6379")
-
-        with pytest.raises(redis.ConnectionError):
-            client = redis.Redis.from_url(redis_url)
-            client.ping()
+            with pytest.raises(redis.ConnectionError):
+                client = redis.Redis.from_url(redis_url)
+                client.ping()
 
 
 @pytest.mark.integration
