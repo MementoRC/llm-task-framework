@@ -1,4 +1,25 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
+import concurrent.futures
+import gc
+import os
+import sys
+import time
+from pathlib import Path
+from typing import TYPE_CHECKING
+
+import psutil
+from memory_profiler import profile
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+# Add src to path for imports
+sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
+
+import llm_task_framework
+
 """
 Memory profiling script for LLM Task Framework.
 
@@ -13,28 +34,14 @@ Usage:
     python -m memory_profiler scripts/memory_test.py
 """
 
-import gc
-import os
-import sys
-import time
-from pathlib import Path
 
-from memory_profiler import profile  # type: ignore[import-not-found]
-
-# Add src to path for imports
-sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
-
-
-@profile
+@profile  # type: ignore[misc]
 def test_framework_import() -> bool:
     """Test memory usage during framework import."""
     print("Testing framework import memory usage...")
 
     # Baseline memory
     gc.collect()
-
-    # Import framework
-    import llm_task_framework  # type: ignore[import-untyped]
 
     # Force garbage collection
     gc.collect()
@@ -43,7 +50,7 @@ def test_framework_import() -> bool:
     return True
 
 
-@profile
+@profile  # type: ignore[misc]
 def test_cli_memory() -> bool:
     """Test memory usage during CLI operations."""
     print("Testing CLI memory usage...")
@@ -52,9 +59,7 @@ def test_cli_memory() -> bool:
 
     try:
         # Simulate CLI argument parsing
-        import sys
-
-        original_argv = sys.argv[:]
+        original_argv: list[str] = sys.argv[:]
         sys.argv = ["llm-task-framework", "--help"]
 
         # This would normally call main.main() but we'll simulate it
@@ -70,7 +75,7 @@ def test_cli_memory() -> bool:
     return True
 
 
-@profile
+@profile  # type: ignore[misc]
 def test_mcp_server_memory() -> bool:
     """Test memory usage during MCP server operations."""
     print("Testing MCP server memory usage...")
@@ -90,19 +95,17 @@ def test_mcp_server_memory() -> bool:
     return True
 
 
-@profile
+@profile  # type: ignore[misc]
 def test_concurrent_operations_memory() -> bool:
     """Test memory usage during concurrent operations."""
     print("Testing concurrent operations memory usage...")
 
     gc.collect()
 
-    import concurrent.futures
-
     def memory_intensive_task() -> bool:
         """Simulate memory-intensive task."""
         # Create some data structures
-        data = []
+        data: list[dict[str, str | int]] = []
         for i in range(1000):
             data.append({"id": i, "data": f"test_data_{i}" * 10})
 
@@ -117,7 +120,7 @@ def test_concurrent_operations_memory() -> bool:
 
     # Run concurrent tasks
     with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
-        futures = []
+        futures: list[concurrent.futures.Future[bool]] = []
         for _i in range(10):
             future = executor.submit(memory_intensive_task)
             futures.append(future)
@@ -130,17 +133,15 @@ def test_concurrent_operations_memory() -> bool:
     return True
 
 
-@profile
+@profile  # type: ignore[misc]
 def test_memory_leaks() -> bool:
     """Test for potential memory leaks."""
     print("Testing for memory leaks...")
 
-    import psutil  # type: ignore[import-untyped]
-
     process = psutil.Process(os.getpid())
 
     # Get initial memory usage
-    initial_memory = process.memory_info().rss
+    initial_memory: int = process.memory_info().rss
     print(f"Initial memory usage: {initial_memory / 1024 / 1024:.2f} MB")
 
     # Perform operations multiple times
@@ -156,8 +157,8 @@ def test_memory_leaks() -> bool:
         gc.collect()
 
         # Check memory usage
-        current_memory = process.memory_info().rss
-        memory_increase = (current_memory - initial_memory) / 1024 / 1024
+        current_memory: int = process.memory_info().rss
+        memory_increase: float = (current_memory - initial_memory) / 1024 / 1024
 
         print(
             f"Memory after iteration {iteration + 1}: {current_memory / 1024 / 1024:.2f} MB"
@@ -170,8 +171,8 @@ def test_memory_leaks() -> bool:
 
         time.sleep(1)
 
-    final_memory = process.memory_info().rss
-    total_increase = (final_memory - initial_memory) / 1024 / 1024
+    final_memory: int = process.memory_info().rss
+    total_increase: float = (final_memory - initial_memory) / 1024 / 1024
 
     print(f"\nFinal memory usage: {final_memory / 1024 / 1024:.2f} MB")
     print(f"Total memory increase: {total_increase:.2f} MB")
@@ -193,15 +194,10 @@ def main() -> int:
     print("🧠 LLM Task Framework Memory Testing")
     print("=" * 50)
 
-    from typing import TYPE_CHECKING
-
-    if TYPE_CHECKING:
-        from collections.abc import Callable
-
-    tests: list[tuple[str, "Callable[[], bool]"]] = [
+    tests: list[tuple[str, Callable[[], bool]]] = [
         ("Framework Import", test_framework_import),
-        ("CLI Operations", test_cli_memory),
-        ("MCP Server", test_mcp_server_memory),
+        ("CLI Memory", test_cli_memory),
+        ("MCP Server Memory", test_mcp_server_memory),
         ("Concurrent Operations", test_concurrent_operations_memory),
         ("Memory Leaks", test_memory_leaks),
     ]
@@ -211,35 +207,33 @@ def main() -> int:
     for test_name, test_func in tests:
         print(f"\n🔍 Running {test_name} test...")
         try:
-            result = test_func()
+            result: bool = test_func()
             results.append((test_name, result))
-            status = "✅ PASSED" if result else "❌ FAILED"
+            status: str = "✅ PASSED" if result else "❌ FAILED"
             print(f"{status}: {test_name}")
         except Exception as e:
             print(f"❌ FAILED: {test_name} - {e}")
             results.append((test_name, False))
 
     # Summary
-    print("\n" + "=" * 50)
-    print("📊 Memory Testing Summary")
+    print("\n📊 Memory Testing Summary")
     print("=" * 50)
-
-    passed = sum(1 for _, result in results if result)
-    total = len(results)
+    passed: int = sum(1 for _, result in results if result)
+    total: int = len(results)
 
     for test_name, result in results:
         status = "✅ PASSED" if result else "❌ FAILED"
         print(f"{status}: {test_name}")
 
-    print(f"\nResults: {passed}/{total} tests passed")
+    print(f"\n📈 Results: {passed}/{total} tests passed")
 
     if passed == total:
         print("🎉 All memory tests passed!")
         return 0
     else:
-        print("💥 Some memory tests failed!")
+        print("⚠️  Some memory tests failed - review results above")
         return 1
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    exit(main())

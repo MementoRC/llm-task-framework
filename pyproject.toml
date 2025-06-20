@@ -222,6 +222,11 @@ module = [
     "openai.*",
     "rich.*",
     "click.*",
+    "redis.*",
+    "memory_profiler.*",
+    "pytest_benchmark.*",
+    "aiohttp.*",
+    "locust.*",
 ]
 ignore_missing_imports = true
 
@@ -305,10 +310,16 @@ perf-memory = "python -m memory_profiler scripts/memory_test.py"
 perf-profile = "python -m cProfile -o reports/profile.stats -m pytest tests/"
 perf-all = { depends-on = ["perf-test"] }
 
+# CI reporting tasks
+ci-summary = "python scripts/generate_ci_summary.py --sample-data"
+ci-summary-real = "python scripts/generate_ci_summary.py --pytest-json reports/pytest-report.json --coverage-xml coverage.xml --reports-dir reports --github-step-summary"
+ci-summary-with-benchmarks = "python scripts/generate_ci_summary.py --pytest-json reports/pytest-report.json --coverage-xml coverage.xml --benchmark-json benchmark.json --reports-dir reports --metrics-json reports/ci-metrics.json"
+
 # Development workflow shortcuts
 dev-setup = { depends-on = ["install", "pre-commit-install"] }
 ci-local = { depends-on = ["format-check", "lint", "typecheck", "test-cov", "security-all"] }
 ci-comprehensive = { depends-on = ["ci-local", "perf-all"] }
+ci-report = { depends-on = ["ci-comprehensive", "ci-summary-real"] }
 
 # Development feature with all dev dependencies
 [tool.pixi.feature.dev.pypi-dependencies]
@@ -328,10 +339,18 @@ pre-commit = ">=3.0.0"
 build = ">=0.10.0"
 twine = ">=4.0.0"
 
+# Integration testing dependencies
+redis = ">=4.0.0"
+websockets = ">=11.0.0"
+
 [tool.pixi.feature.test.pypi-dependencies]
 # Additional testing tools
 pytest-json-report = ">=1.5.0"
 pytest-html = ">=3.1.0"
+# Redis for integration testing
+redis = ">=4.0.0"
+# WebSocket for integration testing
+websockets = ">=11.0.0"
 
 [tool.pixi.feature.docs.pypi-dependencies]
 # Documentation dependencies

@@ -1,0 +1,210 @@
+# Example GitHub Actions integration for comprehensive CI reporting
+# This shows how to integrate the CI reporter into existing workflows
+
+name: Enhanced CI with Comprehensive Reporting
+
+on:
+  push:
+    branches: [ main, master, development ]
+  pull_request:
+    branches: [ main, master, development ]
+
+jobs:
+  comprehensive-ci:
+    name: CI with Enhanced Reporting
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Pixi
+      uses: prefix-dev/setup-pixi@v0.8.8
+      with:
+        pixi-version: v0.41.4
+        cache: true
+
+    # Track execution times for reporting
+    - name: Record start time
+      run: echo "CI_START_TIME=$(date +%s)" >> $GITHUB_ENV
+
+    # Setup phase timing
+    - name: Setup start
+      run: echo "SETUP_START_TIME=$(date +%s)" >> $GITHUB_ENV
+
+    - name: Cache dependencies
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cache/pip
+          ~/.pixi/cache
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/pyproject.toml', '**/pixi.lock') }}
+
+    - name: Setup complete
+      run: |
+        SETUP_END_TIME=$(date +%s)
+        SETUP_TIME=$((SETUP_END_TIME - SETUP_START_TIME))
+        echo "CI_SETUP_TIME=$SETUP_TIME" >> $GITHUB_ENV
+
+    # Testing phase timing
+    - name: Test start
+      run: echo "TEST_START_TIME=$(date +%s)" >> $GITHUB_ENV
+
+    - name: Run tests with coverage and JSON report
+      run: |
+        mkdir -p reports
+        pixi run -e dev pytest \
+          --cov=llm_task_framework \
+          --cov-report=xml:coverage.xml \
+          --cov-report=term \
+          --json-report --json-report-file=reports/pytest-report.json
+
+    - name: Test complete
+      run: |
+        TEST_END_TIME=$(date +%s)
+        TEST_TIME=$((TEST_END_TIME - TEST_START_TIME))
+        echo "CI_TEST_TIME=$TEST_TIME" >> $GITHUB_ENV
+
+    # Quality checks phase timing
+    - name: Quality checks start
+      run: echo "QUALITY_START_TIME=$(date +%s)" >> $GITHUB_ENV
+
+    - name: Run quality checks
+      run: |
+        pixi run -e dev lint
+        pixi run -e dev typecheck
+
+    - name: Quality checks complete
+      run: |
+        QUALITY_END_TIME=$(date +%s)
+        QUALITY_TIME=$((QUALITY_END_TIME - QUALITY_START_TIME))
+        echo "CI_QUALITY_TIME=$QUALITY_TIME" >> $GITHUB_ENV
+
+    # Security scans phase timing
+    - name: Security scans start
+      run: echo "SECURITY_START_TIME=$(date +%s)" >> $GITHUB_ENV
+
+    - name: Run security scans
+      run: pixi run -e security security-ci
+
+    - name: Security scans complete
+      run: |
+        SECURITY_END_TIME=$(date +%s)
+        SECURITY_TIME=$((SECURITY_END_TIME - SECURITY_START_TIME))
+        echo "CI_SECURITY_TIME=$SECURITY_TIME" >> $GITHUB_ENV
+
+    # Performance benchmarks (optional)
+    - name: Run performance benchmarks
+      run: |
+        pixi run -e performance pytest tests -m "benchmark and not slow" \
+          --benchmark-only --benchmark-json=benchmark.json || true
+
+    # Reporting phase timing
+    - name: Reporting start
+      run: echo "REPORTING_START_TIME=$(date +%s)" >> $GITHUB_ENV
+
+    - name: Calculate total CI time
+      run: |
+        CI_END_TIME=$(date +%s)
+        CI_TOTAL_TIME=$((CI_END_TIME - CI_START_TIME))
+        echo "CI_TOTAL_TIME=$CI_TOTAL_TIME" >> $GITHUB_ENV
+
+    - name: Generate comprehensive CI report
+      run: |
+        # Set reporting time (this step duration will be minimal)
+        REPORTING_END_TIME=$(date +%s)
+        REPORTING_TIME=$((REPORTING_END_TIME - REPORTING_START_TIME))
+        echo "CI_REPORTING_TIME=$REPORTING_TIME" >> $GITHUB_ENV
+        
+        # Generate CI summary with all collected data
+        pixi run -e dev python scripts/generate_ci_summary.py \
+          --pytest-json reports/pytest-report.json \
+          --coverage-xml coverage.xml \
+          --benchmark-json benchmark.json \
+          --reports-dir reports \
+          --metrics-json reports/ci-metrics.json \
+          --github-step-summary
+
+    # Upload artifacts
+    - name: Upload test reports
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: test-reports-${{ github.run_number }}
+        path: |
+          reports/
+          coverage.xml
+          benchmark.json
+        retention-days: 30
+
+    - name: Upload CI metrics
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: ci-metrics-${{ github.run_number }}
+        path: reports/ci-metrics.json
+        retention-days: 90
+
+    # Post results to PR (if applicable)
+    - name: Comment PR with CI summary
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+          
+          // Read CI summary if it exists
+          try {
+            const summary = fs.readFileSync('reports/ci-summary.md', 'utf8');
+            
+            // Find existing comment to update or create new one
+            const comments = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            
+            const botComment = comments.data.find(comment => 
+              comment.user.login === 'github-actions[bot]' && 
+              comment.body.includes('CI Execution Summary')
+            );
+            
+            const commentBody = `<!-- CI-SUMMARY-COMMENT -->
+          ${summary}
+          
+          ---
+          *Generated by [Enhanced CI Reporting](https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})*`;
+            
+            if (botComment) {
+              // Update existing comment
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: commentBody
+              });
+            } else {
+              // Create new comment
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: commentBody
+              });
+            }
+          } catch (error) {
+            console.log('Could not post CI summary comment:', error.message);
+          }
+
+# Example of how to integrate into existing workflows
+# Add this step after your existing test/quality check steps:
+#
+# - name: Generate CI Summary
+#   if: always()
+#   run: |
+#     pixi run -e dev python scripts/generate_ci_summary.py \
+#       --pytest-json reports/pytest-report.json \
+#       --coverage-xml coverage.xml \
+#       --reports-dir reports \
+#       --github-step-summary

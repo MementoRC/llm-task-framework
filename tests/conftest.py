@@ -4,6 +4,7 @@ import asyncio
 import contextlib
 import os
 import tempfile
+import time
 import warnings
 from collections.abc import AsyncGenerator, Generator
 from pathlib import Path
@@ -37,7 +38,7 @@ async def auto_cleanup_async_resources() -> AsyncGenerator[None, None]:
 
     # Cleanup any pending aiohttp sessions if aiohttp is available
     try:
-        import aiohttp  # type: ignore[import-not-found]
+        import aiohttp
 
         # Close any unclosed client sessions
         connector = getattr(aiohttp, "_connector", None)
@@ -168,6 +169,122 @@ def temp_project_dir() -> Generator[Path, None, None]:
     """
     with tempfile.TemporaryDirectory(prefix="llm_task_framework_test_") as temp_dir:
         yield Path(temp_dir)
+
+
+@pytest.fixture(scope="function")
+def redis_service_container() -> Generator[Any, None, None]:
+    """Provide a Redis service container for integration tests.
+
+    Uses the new service container infrastructure for Redis integration.
+    """
+    from llm_task_framework.services import RedisServiceContainer
+
+    test_with_services = os.environ.get("TEST_WITH_SERVICES", "false").lower() == "true"
+
+    if not test_with_services:
+        pytest.skip(
+            "Service container testing disabled (TEST_WITH_SERVICES is not 'true')"
+        )
+
+    # Create Redis service container with test configuration
+    container = RedisServiceContainer(
+        redis_url=os.environ.get("REDIS_URL", "redis://localhost:6379"),
+        test_database=13,  # Use database 13 for service container tests
+        max_retries=3,
+        retry_delay=0.5,
+    )
+
+    try:
+        # Use asyncio to connect the container
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(container.connect())
+        loop.run_until_complete(container.select_test_database())
+        loop.run_until_complete(container.flush_test_database())
+
+        yield container
+
+    except Exception as e:
+        pytest.skip(f"Redis service container connection failed: {e}")
+
+    finally:
+        # Cleanup
+        try:
+            loop = asyncio.get_event_loop()
+            loop.run_until_complete(container.flush_test_database())
+            loop.run_until_complete(container.disconnect())
+        except Exception as e:
+            warnings.warn(f"Redis service container cleanup failed: {e}", stacklevel=2)
+
+
+@pytest.fixture(scope="function")
+def redis_client() -> Generator[Any, None, None]:
+    """Provide a Redis client for integration tests.
+
+    Safely handles Redis connection with fallback strategies.
+    Skips tests if Redis is not available.
+    """
+    # Fallback definitions for static analysis. These will be overwritten if
+    # the redis library is available.
+    class RedisConnectionError(Exception): ...
+    class RedisTimeoutError(Exception): ...
+
+    try:
+        import redis as redis_module
+
+        RedisConnectionError = redis_module.ConnectionError
+        RedisTimeoutError = redis_module.TimeoutError
+    except ImportError:
+        pytest.skip("redis library not installed")
+
+    redis_url = os.environ.get("REDIS_URL", "redis://localhost:6379")
+    test_with_services = os.environ.get("TEST_WITH_SERVICES", "false").lower() == "true"
+
+    if not test_with_services:
+        pytest.skip(
+            "Service container testing disabled (TEST_WITH_SERVICES is not 'true')"
+        )
+
+    client = None
+    last_exception = None
+    try:
+        # Create Redis client with increased timeout for CI environments
+        client = redis_module.Redis.from_url(
+            redis_url, decode_responses=True, socket_connect_timeout=5, socket_timeout=5
+        )
+
+        # Test connection with retry logic for CI stability
+        for attempt in range(3):
+            try:
+                client.ping()
+                break  # Success
+            except (RedisConnectionError, RedisTimeoutError) as e:
+                last_exception = e
+                if attempt == 2:
+                    raise
+                time.sleep(1 * (attempt + 1))  # Exponential backoff
+
+        # Use a test-specific database to avoid conflicts
+        client.select(15)
+        client.flushdb()  # Clear test database before test
+
+        yield client
+
+    except (
+        RedisConnectionError,
+        RedisTimeoutError,
+        ConnectionRefusedError,
+    ) as e:
+        pytest.skip(f"Redis connection failed after retries: {last_exception or e}")
+
+    finally:
+        # Cleanup
+        if client:
+            try:
+                client.flushdb()  # Clear test data after test
+                client.close()
+            except Exception as e:
+                # Log cleanup errors but don't fail the test suite
+                warnings.warn(f"Redis cleanup failed: {e}", stacklevel=2)
 
 
 @pytest.fixture(scope="function")
