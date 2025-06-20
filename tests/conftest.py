@@ -223,6 +223,11 @@ def redis_client() -> Generator[Any, None, None]:
     Safely handles Redis connection with fallback strategies.
     Skips tests if Redis is not available.
     """
+    # Fallback definitions for static analysis. These will be overwritten if
+    # the redis library is available.
+    class RedisConnectionError(Exception): ...
+    class RedisTimeoutError(Exception): ...
+
     try:
         import redis as redis_module
 
