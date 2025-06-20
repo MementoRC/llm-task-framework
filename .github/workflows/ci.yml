@@ -57,6 +57,7 @@ jobs:
             - 'tests/**/test_*performance*'
             - 'tests/**/test_*benchmark*'
             - 'locustfile.py'
+            - 'benchmark_rules.json'
           ci:
             - '.github/workflows/**'
             - 'pyproject.toml'
@@ -286,26 +287,33 @@ jobs:
           ${{ runner.os }}-${{ matrix.python-version }}-test-cache-
           ${{ runner.os }}-test-cache-
 
-    # Removed explicit editable install step; Pixi handles editable install automatically via environment setup.
-
-    - name: Run optimized tests with coverage
+    - name: Run optimized tests with coverage (Unix)
+      if: runner.os != 'Windows'
       shell: bash
       run: |
         echo "Running ${{ matrix.test-category }} tests for ${{ matrix.os }} Python ${{ matrix.python-version }}..."
-        pixi run -e dev pytest tests -m "${{ matrix.pytest-marker }}" --cov=llm_task_framework --cov-report=xml:coverage.xml --cov-report=term
+        pixi run -e dev pytest tests -m "${{ matrix.pytest-marker }}" --cov=llm_task_framework --cov-report=xml:coverage.xml --cov-report=term || [ $? -eq 5 ]
       env:
-        # Disable LLM tests in CI unless API keys provided
+        SKIP_LLM_TESTS: ${{ !secrets.ANTHROPIC_API_KEY && !secrets.OPENAI_API_KEY }}
+
+    - name: Run optimized tests with coverage (Windows)
+      if: runner.os == 'Windows'
+      shell: pwsh
+      run: |
+        echo "Running ${{ matrix.test-category }} tests for ${{ matrix.os }} Python ${{ matrix.python-version }}..."
+        pixi run -e dev pytest tests -m "${{ matrix.pytest-marker }}" --cov=llm_task_framework --cov-report=xml:coverage.xml --cov-report=term
+        if ($LASTEXITCODE -ne 0 -and $LASTEXITCODE -ne 5) {
+          exit 1
+        }
+      env:
         SKIP_LLM_TESTS: ${{ !secrets.ANTHROPIC_API_KEY && !secrets.OPENAI_API_KEY }}
 
     - name: Run basic integration tests (cross-platform, Ubuntu/macOS only)
+      if: runner.os != 'Windows'
       shell: bash
       run: |
-        if [[ "${{ matrix.os }}" == "ubuntu-latest" ]] || [[ "${{ matrix.os }}" == "macos-latest" ]]; then
-          echo "Running cross-platform integration tests..."
-          pixi run -e dev pytest tests -m "integration and not mcp and not benchmark" --cov=llm_task_framework --cov-append || [ $? -eq 5 ]
-        else
-          echo "Skipping integration tests on ${{ matrix.os }} for performance optimization"
-        fi
+        echo "Running cross-platform integration tests..."
+        pixi run -e dev pytest tests -m "integration and not mcp and not benchmark" --cov=llm_task_framework --cov-append || [ $? -eq 5 ]
       env:
         SKIP_LLM_TESTS: ${{ !secrets.ANTHROPIC_API_KEY && !secrets.OPENAI_API_KEY }}
 
@@ -326,7 +334,6 @@ jobs:
     needs: [test]
     if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
 
-    # Service containers for enhanced integration testing (Ubuntu only)
     services:
       redis:
         image: redis:7-alpine
@@ -340,8 +347,6 @@ jobs:
 
       websocket-echo:
         image: mendhak/http-https-echo:31
-        # This image supports WebSocket echo functionality via /ws endpoint
-        # WebSocket endpoint available at ws://localhost:8080/ws
         ports:
           - 8080:8080
         env:
@@ -358,21 +363,16 @@ jobs:
         pixi-version: v0.41.4
         cache: true
 
-    # Pixi handles editable install automatically via environment setup.
-
     - name: Wait for Redis service
       run: |
         echo "Waiting for Redis service to be ready..."
-        # Install redis-tools for health checks
         sudo apt-get update && sudo apt-get install -y redis-tools
-        # Wait for Redis with timeout, fail if not ready
         timeout 30 bash -c 'until redis-cli -h localhost -p 6379 ping | grep PONG; do sleep 1; done'
         echo "✅ Redis service is ready."
 
     - name: Wait for WebSocket echo service
       run: |
         echo "Waiting for WebSocket echo service to be ready..."
-        # Wait for the TCP port to be open (WebSocket server ready)
         for i in {1..30}; do
           if nc -z localhost 8080; then
             echo "✅ WebSocket echo service is ready."
@@ -386,14 +386,10 @@ jobs:
     - name: Run advanced integration tests
       run: |
         echo "Running advanced integration tests with external services..."
-        # Run advanced integration tests that may require external services
-        # These run separately to avoid pollution of cross-platform tests
         pixi run -e dev pytest tests -m "integration and not benchmark" --cov=llm_task_framework --cov-report=xml:integration-coverage.xml --cov-fail-under=0 || [ $? -eq 5 ]
       env:
-        # LLM API keys
         ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-        # Service container connection details
         REDIS_URL: redis://localhost:6379
         WEBSOCKET_URL: ws://localhost:8080/ws
         TEST_WITH_SERVICES: true
@@ -401,7 +397,6 @@ jobs:
     - name: Run MCP server tests (isolated)
       run: |
         echo "Running MCP server tests in isolation..."
-        # Run MCP tests separately to prevent any server state pollution
         pixi run -e dev pytest tests -m "mcp and not benchmark" --cov=llm_task_framework --cov-append --cov-fail-under=0 || [ $? -eq 5 ]
       env:
         ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
@@ -417,13 +412,16 @@ jobs:
         name: codecov-integration
         fail_ci_if_error: false
 
-  performance-tests:
-    name: Performance Testing
+  benchmark:
+    name: Performance and Benchmark Analysis
     runs-on: ubuntu-latest
     timeout-minutes: 15
     needs: [detect-changes, test]
-    if: needs.detect-changes.outputs.has-performance-changes == 'true' || needs.detect-changes.outputs.has-python-changes == 'true' || github.event_name == 'workflow_dispatch'
-    continue-on-error: true  # Don't fail CI if performance tests have issues
+    if: (needs.detect-changes.outputs.has-performance-changes == 'true' || needs.detect-changes.outputs.has-python-changes == 'true' || github.event_name == 'workflow_dispatch') && (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
+    permissions:
+      actions: read
+      pull-requests: write
+    continue-on-error: true
 
     steps:
     - name: Checkout code
@@ -437,33 +435,44 @@ jobs:
 
     - name: Run benchmark tests
       run: |
-        echo "Running performance benchmark tests..."
-        pixi run -e performance perf-test || echo "Performance tests completed with warnings"
+        pixi run -e performance pytest tests -m "benchmark and not slow" --benchmark-only --benchmark-json=benchmark.json --no-cov || [ $? -eq 5 ]
 
-    - name: Generate performance profile
-      run: |
-        echo "Generating performance profile..."
-        pixi run -e performance perf-profile || echo "Performance profiling completed"
-
-    - name: Upload performance reports
+    - name: Upload benchmark data for this run
       uses: actions/upload-artifact@v4
-      if: always()
       with:
-        name: performance-reports-${{ github.run_number }}
-        path: |
-          reports/profile.stats
-          .pytest_cache/
+        name: benchmark-results-${{ github.sha }}
+        path: benchmark.json
         retention-days: 7
 
-    - name: Performance summary
-      if: always()
+    - name: Download baseline from main branch
+      if: github.event_name == 'pull_request'
+      uses: dawidd6/action-download-artifact@v6
+      with:
+        workflow: ci.yml
+        branch: ${{ github.base_ref }}
+        name: benchmark-baseline
+        path: baseline/
+        if_no_artifact_found: 'warn'
+
+    - name: Analyze benchmark results
+      if: github.event_name == 'pull_request'
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
-        echo "## 🚀 Performance Test Results" >> $GITHUB_STEP_SUMMARY
-        echo "Performance tests completed. Check artifacts for detailed reports." >> $GITHUB_STEP_SUMMARY
-        if [ -f "reports/profile.stats" ]; then
-          echo "- ✅ Performance profile: Generated" >> $GITHUB_STEP_SUMMARY
+        BASELINE_FILE="baseline/benchmark.json"
+        if [ ! -f "$BASELINE_FILE" ]; then
+          echo "No baseline found, creating an empty baseline file."
+          echo '{"benchmarks": []}' > "$BASELINE_FILE"
         fi
-        echo "- 📊 Benchmark results: Available in test artifacts" >> $GITHUB_STEP_SUMMARY
+        python scripts/analyze_benchmarks.py --baseline "$BASELINE_FILE" --current benchmark.json --rules-file benchmark_rules.json > benchmark_report.md
+        python scripts/post_benchmark_comment.py --report benchmark_report.md --repo ${{ github.repository }} --pr ${{ github.event.pull_request.number }}
+
+    - name: Update baseline artifact
+      if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/development') && github.event_name == 'push'
+      uses: actions/upload-artifact@v4
+      with:
+        name: benchmark-baseline
+        path: benchmark.json
 
   build-and-test-package:
     name: Build and Test Package
@@ -521,67 +530,6 @@ jobs:
         path: dist/
         retention-days: 30
 
-  # Performance baseline (non-blocking)
-  performance:
-    name: Performance Baseline
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    needs: [test]
-    continue-on-error: true
-
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Set up Pixi
-      uses: prefix-dev/setup-pixi@v0.8.8
-      with:
-        pixi-version: v0.41.4
-        cache: true
-
-    # Pixi handles editable install automatically via environment setup.
-
-    - name: Install benchmark dependencies
-      run: pixi run -e dev pip install pytest-benchmark
-
-    - name: Run performance tests (isolated)
-      run: |
-        echo "Running performance benchmarks in isolation..."
-        # Run performance tests separately to avoid interference with other test types
-        # Exclude slow tests and run only benchmark-marked tests
-        pixi run -e dev pytest tests -m "benchmark and not slow" --benchmark-only --benchmark-json=benchmark.json --no-cov || [ $? -eq 5 ]
-
-    - name: Upload benchmark results
-      uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: benchmark-results
-        path: benchmark.json
-        retention-days: 30
-
-    - name: Analyze benchmark results
-      run: |
-        echo "Analyzing benchmark results..."
-        # Use a default baseline if one doesn't exist
-        BASELINE_FILE="benchmark_baseline.json"
-        if [ ! -f "$BASELINE_FILE" ]; then
-          echo "No baseline found, creating an empty baseline file"
-          echo '{"benchmarks": []}' > "$BASELINE_FILE"
-        fi
-        python scripts/analyze_benchmarks.py --baseline benchmark_baseline.json --current benchmark.json --regression-threshold 0.1 > benchmark_report.md
-
-    - name: Post benchmark results to PR
-      if: github.event_name == 'pull_request'
-      run: |
-        echo "Posting benchmark results to PR..."
-        python scripts/post_benchmark_comment.py --report benchmark_report.md --repo ${{ github.repository }} --pr ${{ github.event.pull_request.number }} --github-token ${{ secrets.GITHUB_TOKEN }}
-
-    - name: Store benchmark results for future comparison
-      run: |
-        echo "Storing benchmark results for future comparison..."
-        cp benchmark.json benchmark_baseline.json
-
-  # Documentation build check
   docs:
     name: Documentation
     runs-on: ubuntu-latest
@@ -627,7 +575,6 @@ jobs:
         path: site/
         retention-days: 30
 
-  # Final status check
   ci-success:
     name: CI Success
     runs-on: ubuntu-latest
@@ -649,7 +596,6 @@ jobs:
           echo "Tests failed"
           exit 1
         fi
-        # Accept integration-tests result as success, skipped, or cancelled (timeout)
         if [[ "${{ needs.integration-tests.result }}" != "success" && "${{ needs.integration-tests.result }}" != "skipped" && "${{ needs.integration-tests.result }}" != "cancelled" ]]; then
           echo "Integration tests failed"
           exit 1

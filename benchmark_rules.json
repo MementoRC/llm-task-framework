@@ -1,0 +1,22 @@
+{
+  "rules": [
+    {
+      "metric": "mean",
+      "threshold_type": "percentage",
+      "threshold": 0.1,
+      "severity": "error"
+    },
+    {
+      "metric": "stddev",
+      "threshold_type": "percentage",
+      "threshold": 0.5,
+      "severity": "warning"
+    },
+    {
+      "metric": "max",
+      "threshold_type": "percentage",
+      "threshold": 0.2,
+      "severity": "warning"
+    }
+  ]
+}

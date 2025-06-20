@@ -42,7 +42,9 @@ def main() -> None:
 
     if args.rules_file:
         with open(args.rules_file) as f:
-            rules = json.load(f)
+            rules_data = json.load(f)
+            # Support both a direct list and a dict with a "rules" key
+            rules = rules_data.get("rules", rules_data)
     elif args.regression_threshold is not None:
         print(
             "Warning: --regression-threshold is deprecated. Use --rules-file for more control.",
@@ -76,7 +78,12 @@ def main() -> None:
     analyzer = BenchmarkAnalyzer(regression_rules=rules)
     reporter = BenchmarkReporter()
 
-    baseline_data: list[dict[str, Any]] = analyzer.load_benchmark_data(args.baseline)
+    try:
+        baseline_data: list[dict[str, Any]] = analyzer.load_benchmark_data(args.baseline)
+    except FileNotFoundError:
+        print(f"Baseline file not found at {args.baseline}. Assuming empty baseline.", file=sys.stderr)
+        baseline_data = []
+
     current_data: list[dict[str, Any]] = analyzer.load_benchmark_data(args.current)
 
     if not current_data:

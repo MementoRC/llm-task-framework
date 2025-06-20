@@ -72,7 +72,7 @@ jobs:
       run: pixi run -e dev typecheck
 
     - name: Run tests
-      run: pixi run -e dev test-cov
+      run: pixi run -e dev test-cov || [ $? -eq 5 ]
 
     - name: Upload coverage
       uses: codecov/codecov-action@v3
