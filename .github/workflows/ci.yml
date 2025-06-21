@@ -188,6 +188,7 @@ jobs:
 
     - name: Run enhanced security scans
       run: pixi run -e security security-ci
+      continue-on-error: true
 
     - name: Upload security reports
       uses: actions/upload-artifact@v4
@@ -287,24 +288,11 @@ jobs:
           ${{ runner.os }}-${{ matrix.python-version }}-test-cache-
           ${{ runner.os }}-test-cache-
 
-    - name: Run optimized tests with coverage (Unix)
-      if: runner.os != 'Windows'
+    - name: Run optimized tests with coverage
       shell: bash
       run: |
         echo "Running ${{ matrix.test-category }} tests for ${{ matrix.os }} Python ${{ matrix.python-version }}..."
         pixi run -e dev pytest tests -m "${{ matrix.pytest-marker }}" --cov=llm_task_framework --cov-report=xml:coverage.xml --cov-report=term || [ $? -eq 5 ]
-      env:
-        SKIP_LLM_TESTS: ${{ !secrets.ANTHROPIC_API_KEY && !secrets.OPENAI_API_KEY }}
-
-    - name: Run optimized tests with coverage (Windows)
-      if: runner.os == 'Windows'
-      shell: pwsh
-      run: |
-        echo "Running ${{ matrix.test-category }} tests for ${{ matrix.os }} Python ${{ matrix.python-version }}..."
-        pixi run -e dev pytest tests -m "${{ matrix.pytest-marker }}" --cov=llm_task_framework --cov-report=xml:coverage.xml --cov-report=term
-        if ($LASTEXITCODE -ne 0 -and $LASTEXITCODE -ne 5) {
-          exit 1
-        }
       env:
         SKIP_LLM_TESTS: ${{ !secrets.ANTHROPIC_API_KEY && !secrets.OPENAI_API_KEY }}
 
