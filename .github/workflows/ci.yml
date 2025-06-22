@@ -107,15 +107,21 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-pre-commit-
 
+    - name: Install dependencies
+      run: pixi install -e dev
+
     - name: Fast linting check
-      run: pixi run -e dev lint || true
+      run: pixi run -e dev lint
+      continue-on-error: true
 
     - name: Fast unit tests (no coverage)
-      run: pixi run -e dev test-fast -m "not integration and not mcp" || true
+      run: pixi run -e dev test-fast -m "not integration and not mcp"
+      continue-on-error: true
 
     - name: Fast package import test
       run: |
         pixi run -e dev python -c "import llm_task_framework; print('✅ Package imports successfully')" || echo "❌ Package import failed"
+      continue-on-error: true
 
     - name: Quick feedback summary
       if: always()
@@ -176,6 +182,9 @@ jobs:
     - name: Set cache date
       id: date
       run: echo "week=$(date +'%Y-W%V')" >> $GITHUB_OUTPUT
+
+    - name: Install dependencies
+      run: pixi install -e dev -e security
 
     - name: Check code formatting
       run: pixi run -e dev format-check
@@ -288,11 +297,15 @@ jobs:
           ${{ runner.os }}-${{ matrix.python-version }}-test-cache-
           ${{ runner.os }}-test-cache-
 
+    - name: Install dependencies
+      run: pixi install -e dev
+
     - name: Run optimized tests with coverage
       shell: bash
       run: |
+        set -e
         echo "Running ${{ matrix.test-category }} tests for ${{ matrix.os }} Python ${{ matrix.python-version }}..."
-        pixi run -e dev pytest tests -m "${{ matrix.pytest-marker }}" --cov=llm_task_framework --cov-report=xml:coverage.xml --cov-report=term || [ $? -eq 5 ]
+        pixi run -e dev pytest tests -m "${{ matrix.pytest-marker }}" --cov=llm_task_framework --cov-report=xml:coverage.xml --cov-report=term
       env:
         SKIP_LLM_TESTS: ${{ !secrets.ANTHROPIC_API_KEY && !secrets.OPENAI_API_KEY }}
 
@@ -300,8 +313,9 @@ jobs:
       if: runner.os != 'Windows'
       shell: bash
       run: |
+        set -e
         echo "Running cross-platform integration tests..."
-        pixi run -e dev pytest tests -m "integration and not mcp and not benchmark" --cov=llm_task_framework --cov-append || [ $? -eq 5 ]
+        pixi run -e dev pytest tests -m "integration and not mcp and not benchmark" --cov=llm_task_framework --cov-append
       env:
         SKIP_LLM_TESTS: ${{ !secrets.ANTHROPIC_API_KEY && !secrets.OPENAI_API_KEY }}
 
@@ -351,15 +365,22 @@ jobs:
         pixi-version: v0.41.4
         cache: true
 
+    - name: Install dependencies
+      run: pixi install -e dev
+
     - name: Wait for Redis service
+      shell: bash
       run: |
+        set -e
         echo "Waiting for Redis service to be ready..."
         sudo apt-get update && sudo apt-get install -y redis-tools
         timeout 30 bash -c 'until redis-cli -h localhost -p 6379 ping | grep PONG; do sleep 1; done'
         echo "✅ Redis service is ready."
 
     - name: Wait for WebSocket echo service
+      shell: bash
       run: |
+        set -e
         echo "Waiting for WebSocket echo service to be ready..."
         for i in {1..30}; do
           if nc -z localhost 8080; then
@@ -372,9 +393,11 @@ jobs:
         exit 1
 
     - name: Run advanced integration tests
+      shell: bash
       run: |
+        set -e
         echo "Running advanced integration tests with external services..."
-        pixi run -e dev pytest tests -m "integration and not benchmark" --cov=llm_task_framework --cov-report=xml:integration-coverage.xml --cov-fail-under=0 || [ $? -eq 5 ]
+        pixi run -e dev pytest tests -m "integration and not benchmark" --cov=llm_task_framework --cov-report=xml:integration-coverage.xml --cov-fail-under=0
       env:
         ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
@@ -383,9 +406,11 @@ jobs:
         TEST_WITH_SERVICES: true
 
     - name: Run MCP server tests (isolated)
+      shell: bash
       run: |
+        set -e
         echo "Running MCP server tests in isolation..."
-        pixi run -e dev pytest tests -m "mcp and not benchmark" --cov=llm_task_framework --cov-append --cov-fail-under=0 || [ $? -eq 5 ]
+        pixi run -e dev pytest tests -m "mcp and not benchmark" --cov=llm_task_framework --cov-append --cov-fail-under=0
       env:
         ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
@@ -421,10 +446,15 @@ jobs:
         pixi-version: v0.41.4
         cache: true
 
-    - name: Run benchmark tests
-      run: |
-        pixi run -e performance pytest tests -m "benchmark and not slow" --benchmark-only --benchmark-json=benchmark.json --no-cov || [ $? -eq 5 ]
+    - name: Install dependencies
+      run: pixi install -e performance
 
+    - name: Run benchmark tests
+      shell: bash
+      run: |
+        set -e
+        pixi run -e performance pytest tests -m "benchmark and not slow" --benchmark-only --benchmark-json=benchmark.json --no-cov
+      
     - name: Upload benchmark data for this run
       uses: actions/upload-artifact@v4
       with:
@@ -499,15 +529,18 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-build-
 
+    - name: Install dependencies
+      run: pixi install -e dev -e prod
+
     - name: Build package
       run: pixi run -e dev build
 
     - name: Check package
-      run: pixi run -e dev sh -c "pip install twine && twine check dist/*"
+      run: pixi run -e dev twine check dist/*
 
     - name: Test package installation
       run: |
-        pixi run -e prod sh -c "pip install dist/*.whl"
+        pixi run -e prod pip install dist/*.whl
         pixi run -e prod python -c "import llm_task_framework; print(\"Package imported successfully\")"
         pixi run -e prod llm-task-framework --help
 
@@ -552,6 +585,9 @@ jobs:
         key: ${{ runner.os }}-docs-${{ hashFiles('docs/**', 'mkdocs.yml', 'README.md') }}
         restore-keys: |
           ${{ runner.os }}-docs-
+
+    - name: Install dependencies
+      run: pixi install -e docs
 
     - name: Build documentation
       run: pixi run -e docs docs-build
