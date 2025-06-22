@@ -10,7 +10,6 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  PYTHONPATH: src
   PYTHONUNBUFFERED: "1"
   FORCE_COLOR: "1"
 
