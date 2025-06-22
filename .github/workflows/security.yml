@@ -75,23 +75,29 @@ jobs:
         pixi install -e security
         pip install --upgrade pip
 
-    - name: Run Safety check
-      run: |
-        echo "Running Safety dependency vulnerability scan..."
-        pixi run -e security safety check --json --output safety-report.json || true
-        pixi run -e security safety check || echo "Safety scan completed with findings"
+    - name: Run Safety check for report
+      run: pixi run -e security safety check --json --output safety-report.json
+      continue-on-error: true
 
-    - name: Run pip-audit scan
-      run: |
-        echo "Running pip-audit vulnerability scan..."
-        pixi run -e security pip-audit --skip-editable --ignore-vuln GHSA-9hjg-9r4m-mvj7 --format=json --output=pip-audit-report.json || true
-        pixi run -e security pip-audit --skip-editable --ignore-vuln GHSA-9hjg-9r4m-mvj7 || echo "pip-audit scan completed with findings"
+    - name: Run Safety check for logs
+      run: pixi run -e security safety check || echo "Safety scan may have found issues. See logs for details."
+      continue-on-error: true
 
-    - name: Run Bandit security scan
-      run: |
-        echo "Running Bandit static security analysis..."
-        pixi run -e security bandit -r src/ -f json -o bandit-report.json || true
-        pixi run -e security bandit -r src/ || echo "Bandit scan completed with findings"
+    - name: Run pip-audit scan for report
+      run: pixi run -e security pip-audit --skip-editable --ignore-vuln GHSA-9hjg-9r4m-mvj7 --format=json --output=pip-audit-report.json
+      continue-on-error: true
+
+    - name: Run pip-audit scan for logs
+      run: pixi run -e security pip-audit --skip-editable --ignore-vuln GHSA-9hjg-9r4m-mvj7 || echo "pip-audit scan may have found issues. See logs for details."
+      continue-on-error: true
+
+    - name: Run Bandit security scan for report
+      run: pixi run -e security bandit -r src/ -f json -o bandit-report.json
+      continue-on-error: true
+
+    - name: Run Bandit security scan for logs
+      run: pixi run -e security bandit -r src/ || echo "Bandit scan may have found issues. See logs for details."
+      continue-on-error: true
 
     - name: Upload security reports
       uses: actions/upload-artifact@v4

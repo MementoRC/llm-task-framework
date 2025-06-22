@@ -71,8 +71,24 @@ jobs:
     - name: Run type checking
       run: pixi run -e dev typecheck
 
-    - name: Run tests
-      run: pixi run -e dev test-cov || [ $? -eq 5 ]
+    - name: Run tests and handle exit codes
+      run: |
+        # Run tests and allow non-zero exit code to be captured
+        pixi run -e dev test-cov || exit_code=$?
+
+        # Pytest exits with 5 if no tests are collected. For feature branches,
+        # this is not a failure.
+        if [[ "${exit_code:-0}" -eq 5 ]]; then
+          echo "✅ Pytest exited with code 5 (no tests found), which is acceptable for a feature branch."
+          exit 0
+        # Any other non-zero exit code is a failure.
+        elif [[ "${exit_code:-0}" -ne 0 ]]; then
+          echo "❌ Tests failed with exit code ${exit_code}."
+          exit "${exit_code}"
+        fi
+
+        echo "✅ Tests passed."
+      shell: bash
 
     - name: Upload coverage
       uses: codecov/codecov-action@v3
