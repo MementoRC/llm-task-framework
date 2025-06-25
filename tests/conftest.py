@@ -223,9 +223,13 @@ def redis_client() -> Generator[Any, None, None]:
     Safely handles Redis connection with fallback strategies.
     Skips tests if Redis is not available.
     """
+    # Initialize with generic exceptions as fallbacks to prevent CodeQL warnings
+    RedisConnectionError = Exception
+    RedisTimeoutError = Exception
+
     try:
         import redis as redis_module
-
+        # If import succeeds, override with specific Redis exceptions
         RedisConnectionError = redis_module.ConnectionError
         RedisTimeoutError = redis_module.TimeoutError
     except ImportError:
