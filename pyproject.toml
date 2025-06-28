@@ -217,11 +217,32 @@ disallow_untyped_decorators = false
 
 [[tool.mypy.overrides]]
 module = [
+    "scenarios.*",
+    "scripts.*",
+    "locustfile",
+    "llm_task_framework.cli.*",
+]
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+disallow_untyped_decorators = false
+ignore_errors = true
+
+[[tool.mypy.overrides]]
+module = [
     "mcp.*",
     "anthropic.*",
     "openai.*",
     "rich.*",
     "click.*",
+    "redis.*",
+    "memory_profiler.*",
+    "pytest_benchmark.*",
+    "aiohttp.*",
+    "locust.*",
+    "websockets.*",
+    "psutil.*",
+    "defusedxml.*",
+    "requests.*",
 ]
 ignore_missing_imports = true
 
@@ -241,7 +262,7 @@ python = ">=3.10,<3.13"
 # Development tasks
 [tool.pixi.tasks]
 install = "python -m pip install -e ."
-clean = "rm -rf build/ dist/ *.egg-info/ .pytest_cache/ .coverage htmlcov/ .mypy_cache/ .ruff_cache/"
+clean = "python -c \"import shutil, pathlib; for d in ['build', 'dist', '.pytest_cache', 'htmlcov', '.mypy_cache', '.ruff_cache']: p = pathlib.Path(d); p.is_dir() and shutil.rmtree(p, ignore_errors=True); for e in pathlib.Path('.').glob('*.egg-info'): e.is_dir() and shutil.rmtree(e, ignore_errors=True); pathlib.Path('.coverage').unlink(missing_ok=True)\""
 
 # Testing tasks
 test = "pytest"
@@ -270,7 +291,7 @@ security-secrets = "detect-secrets scan --baseline .secrets.baseline --all-files
 security-supply-chain = "python -c \"import pkg_resources; print('Supply chain verification: OK')\""
 security-comprehensive = { depends-on = ["security-static", "security-deps", "security-audit", "security-secrets", "security-supply-chain"] }
 security-all = { depends-on = ["security-comprehensive"] }
-security-ci = "mkdir -p reports && echo 'Starting security scans...' && pixi run -e security security-comprehensive"
+security-ci = "python -c \"import os; os.makedirs('reports', exist_ok=True)\" && echo 'Starting security scans...' && pixi run -e security security-comprehensive"
 
 # Documentation tasks
 docs-build = "mkdocs build"
@@ -305,10 +326,16 @@ perf-memory = "python -m memory_profiler scripts/memory_test.py"
 perf-profile = "python -m cProfile -o reports/profile.stats -m pytest tests/"
 perf-all = { depends-on = ["perf-test"] }
 
+# CI reporting tasks
+ci-summary = "python scripts/generate_ci_summary.py --sample-data"
+ci-summary-real = "python scripts/generate_ci_summary.py --pytest-json reports/pytest-report.json --coverage-xml coverage.xml --reports-dir reports --github-step-summary"
+ci-summary-with-benchmarks = "python scripts/generate_ci_summary.py --pytest-json reports/pytest-report.json --coverage-xml coverage.xml --benchmark-json benchmark.json --reports-dir reports --metrics-json reports/ci-metrics.json"
+
 # Development workflow shortcuts
 dev-setup = { depends-on = ["install", "pre-commit-install"] }
 ci-local = { depends-on = ["format-check", "lint", "typecheck", "test-cov", "security-all"] }
 ci-comprehensive = { depends-on = ["ci-local", "perf-all"] }
+ci-report = { depends-on = ["ci-comprehensive", "ci-summary-real"] }
 
 # Development feature with all dev dependencies
 [tool.pixi.feature.dev.pypi-dependencies]
@@ -328,10 +355,18 @@ pre-commit = ">=3.0.0"
 build = ">=0.10.0"
 twine = ">=4.0.0"
 
+# Integration testing dependencies
+redis = ">=4.0.0"
+websockets = ">=11.0.0"
+
 [tool.pixi.feature.test.pypi-dependencies]
 # Additional testing tools
 pytest-json-report = ">=1.5.0"
 pytest-html = ">=3.1.0"
+# Redis for integration testing
+redis = ">=4.0.0"
+# WebSocket for integration testing
+websockets = ">=11.0.0"
 
 [tool.pixi.feature.docs.pypi-dependencies]
 # Documentation dependencies
@@ -354,6 +389,8 @@ locust = ">=2.20.0"
 pytest-benchmark = ">=4.0.0"
 pytest-xdist = ">=3.0.0"
 memory-profiler = ">=0.60.0"
+pandas = ">=2.0.0" # Added for performance analysis scripts
+numpy = ">=1.20.0" # Added for performance analysis scripts
 
 # Python version features
 

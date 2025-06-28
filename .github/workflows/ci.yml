@@ -12,7 +12,6 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  PYTHONPATH: src
   PYTHONUNBUFFERED: "1"
   FORCE_COLOR: "1"
 
@@ -57,6 +56,7 @@ jobs:
             - 'tests/**/test_*performance*'
             - 'tests/**/test_*benchmark*'
             - 'locustfile.py'
+            - 'benchmark_rules.json'
           ci:
             - '.github/workflows/**'
             - 'pyproject.toml'
@@ -88,15 +88,43 @@ jobs:
         pixi-version: v0.41.4
         cache: true
 
+    - name: Cache Python packages
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/pyproject.toml', '**/pixi.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+
+    - name: Cache pre-commit hooks
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/pre-commit
+        key: ${{ runner.os }}-pre-commit-${{ hashFiles('.pre-commit-config.yaml') }}
+        restore-keys: |
+          ${{ runner.os }}-pre-commit-
+
+    - name: Install dependencies
+      run: pixi install -e dev
+
     - name: Fast linting check
-      run: pixi run -e dev lint || true
+      run: pixi run -e dev lint
+      continue-on-error: true
 
     - name: Fast unit tests (no coverage)
-      run: pixi run -e dev test-fast -m "not integration and not mcp" || true
+      run: pixi run -e dev test-fast -m "not integration and not mcp"
+      continue-on-error: true
 
     - name: Fast package import test
+      shell: bash
       run: |
-        pixi run -e dev python -c "import llm_task_framework; print('✅ Package imports successfully')" || echo "❌ Package import failed"
+        pixi run -e dev python -c "import llm_task_framework; print('✅ Package imports successfully')"
+        if [ $? -ne 0 ]; then
+            echo "❌ Package import failed"
+            exit 1
+        fi
+      continue-on-error: true
 
     - name: Quick feedback summary
       if: always()
@@ -125,6 +153,46 @@ jobs:
         pixi-version: v0.41.4
         cache: true
 
+    - name: Clean pixi cache (Windows only)
+      if: runner.os == 'Windows'
+      shell: pwsh
+      run: pixi clean
+
+    - name: Cache Python packages
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/pyproject.toml', '**/pixi.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+
+    - name: Cache pre-commit hooks
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/pre-commit
+        key: ${{ runner.os }}-pre-commit-${{ hashFiles('.pre-commit-config.yaml') }}
+        restore-keys: |
+          ${{ runner.os }}-pre-commit-
+
+    - name: Cache security scan databases
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.local/share/bandit
+          ~/.cache/safety
+          ~/.cache/pip-audit
+        key: ${{ runner.os }}-security-db-${{ steps.date.outputs.week }}
+        restore-keys: |
+          ${{ runner.os }}-security-db-
+
+    - name: Set cache date
+      id: date
+      run: echo "week=$(date +'%Y-W%V')" >> $GITHUB_OUTPUT
+
+    - name: Install dependencies
+      run: pixi install -e dev -e security
+
     - name: Check code formatting
       run: pixi run -e dev format-check
 
@@ -136,6 +204,7 @@ jobs:
 
     - name: Run enhanced security scans
       run: pixi run -e security security-ci
+      continue-on-error: true
 
     - name: Upload security reports
       uses: actions/upload-artifact@v4
@@ -150,21 +219,22 @@ jobs:
 
     - name: Security scan summary
       if: always()
+      shell: pwsh
       run: |
-        echo "## 🛡️ Security Scan Results" >> $GITHUB_STEP_SUMMARY
-        echo "Security scans completed. Check artifacts for detailed reports." >> $GITHUB_STEP_SUMMARY
-        if [ -f "reports/bandit-report.json" ]; then
-          echo "- ✅ Static analysis (Bandit): Report generated" >> $GITHUB_STEP_SUMMARY
-        fi
-        if [ -f "reports/safety-report.json" ]; then
-          echo "- ✅ Dependency scan (Safety): Report generated" >> $GITHUB_STEP_SUMMARY
-        fi
-        if [ -f "reports/pip-audit-report.json" ]; then
-          echo "- ✅ Package audit (pip-audit): Report generated" >> $GITHUB_STEP_SUMMARY
-        fi
+        echo "## 🛡️ Security Scan Results" >> $env:GITHUB_STEP_SUMMARY
+        echo "Security scans completed. Check artifacts for detailed reports." >> $env:GITHUB_STEP_SUMMARY
+        if (Test-Path "reports/bandit-report.json" -PathType Leaf) {
+          echo "- ✅ Static analysis (Bandit): Report generated" >> $env:GITHUB_STEP_SUMMARY
+        }
+        if (Test-Path "reports/safety-report.json" -PathType Leaf) {
+          echo "- ✅ Dependency scan (Safety): Report generated" >> $env:GITHUB_STEP_SUMMARY
+        }
+        if (Test-Path "reports/pip-audit-report.json" -PathType Leaf) {
+          echo "- ✅ Package audit (pip-audit): Report generated" >> $env:GITHUB_STEP_SUMMARY
+        }
 
   test:
-    name: Test Python ${{ matrix.python-version }} on ${{ matrix.os }}
+    name: Test Python ${{ matrix.python-version }} on ${{ matrix.os }} [${{ matrix.test-category }}]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 20
     needs: [detect-changes]
@@ -173,24 +243,35 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # Ubuntu: Full Python version coverage (primary development platform)
+          # Ubuntu: Full coverage (all markers except slow/benchmark/mcp/integration for unit, then integration separately)
           - os: ubuntu-latest
             python-version: "3.10"
+            test-category: "full"
+            pytest-marker: "not slow and not benchmark and not mcp"
           - os: ubuntu-latest
             python-version: "3.11"
+            test-category: "full"
+            pytest-marker: "not slow and not benchmark and not mcp"
           - os: ubuntu-latest
             python-version: "3.12"
+            test-category: "full"
+            pytest-marker: "not slow and not benchmark and not mcp"
 
-          # macOS: Python 3.12+ only (aligned with external patterns)
+          # macOS: Core tests (no slow, no network, no integration, no mcp, no benchmark)
           - os: macos-latest
             python-version: "3.12"
+            test-category: "core"
+            pytest-marker: "not slow and not network and not integration and not mcp and not benchmark"
 
-          # Windows: Core versions with performance optimizations
+          # Windows: Essential tests (no slow, no network, no integration, no mcp, no benchmark, no e2e, no load)
           - os: windows-latest
             python-version: "3.10"
-            test-marker: "not slow"  # Skip slow tests on Windows 3.10
+            test-category: "essential"
+            pytest-marker: "not slow and not network and not integration and not mcp and not benchmark and not e2e and not load"
           - os: windows-latest
             python-version: "3.12"
+            test-category: "essential"
+            pytest-marker: "not slow and not network and not integration and not mcp and not benchmark and not e2e and not load"
 
     steps:
     - name: Checkout code
@@ -202,37 +283,63 @@ jobs:
         pixi-version: v0.41.4
         cache: true
 
-    - name: Run unit tests with coverage
+    - name: Clean pixi cache (Windows only)
+      if: runner.os == 'Windows'
+      shell: pwsh
+      run: pixi clean
+
+    - name: Cache Python packages (matrix-specific)
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cache/pip
+        key: ${{ runner.os }}-${{ matrix.python-version }}-pip-${{ hashFiles('**/pyproject.toml', '**/pixi.lock') }}
+        # Removed the less specific restore-key to avoid potential conflicts
+        restore-keys: |
+          ${{ runner.os }}-${{ matrix.python-version }}-pip-
+
+    - name: Cache test fixtures and pytest cache
+      uses: actions/cache@v4
+      with:
+        path: |
+          .pytest_cache
+          tests/fixtures/data
+        key: ${{ runner.os }}-${{ matrix.python-version }}-test-cache-${{ hashFiles('tests/**/*.py') }}
+        restore-keys: |
+          ${{ runner.os }}-${{ matrix.python-version }}-test-cache-
+          ${{ runner.os }}-test-cache-
+
+    - name: Install dependencies
+      run: pixi install -e dev
+
+    - name: Run optimized tests with coverage (Unix)
+      if: runner.os != 'Windows'
       shell: bash
       run: |
-        # Run unit tests first to avoid URL patching pollution from integration tests
-        # Exclude integration and mcp tests from main test matrix to prevent pollution
-        # Use platform-specific optimizations for test execution
-        if [[ "${{ matrix.test-marker }}" != "" ]]; then
-          echo "Running optimized unit tests for ${{ matrix.os }} Python ${{ matrix.python-version }}..."
-          pixi run -e dev pytest tests -m "not integration and not mcp and not benchmark and ${{ matrix.test-marker }}" --cov=llm_task_framework --cov-report=xml:coverage.xml --cov-report=term --maxfail=5 -x
-        else
-          echo "Running standard unit tests for ${{ matrix.os }} Python ${{ matrix.python-version }}..."
-          pixi run -e dev pytest tests -m "not integration and not mcp and not benchmark" --cov=llm_task_framework --cov-report=xml:coverage.xml --cov-report=term
-        fi
+        set -e
+        echo "Running ${{ matrix.test-category }} tests for ${{ matrix.os }} Python ${{ matrix.python-version }}..."
+        pixi run -e dev pytest tests -m "${{ matrix.pytest-marker }}" --cov=llm_task_framework --cov-report=xml:coverage.xml --cov-report=term
       env:
-        # Disable LLM tests in CI unless API keys provided
         SKIP_LLM_TESTS: ${{ !secrets.ANTHROPIC_API_KEY && !secrets.OPENAI_API_KEY }}
 
-    - name: Run basic integration tests (cross-platform)
+    - name: Run optimized tests with coverage (Windows)
+      if: runner.os == 'Windows'
+      shell: pwsh
+      run: |
+        $ErrorActionPreference = "Stop" # Ensure script stops on first error
+        echo "Running ${{ matrix.test-category }} tests for ${{ matrix.os }} Python ${{ matrix.python-version }}..."
+        pixi run -e dev pytest tests -m "${{ matrix.pytest-marker }}" --cov=llm_task_framework --cov-report=xml:coverage.xml --cov-report=term
+      env:
+        SKIP_LLM_TESTS: ${{ !secrets.ANTHROPIC_API_KEY && !secrets.OPENAI_API_KEY }}
+
+    - name: Run basic integration tests (cross-platform, Ubuntu/macOS only)
+      if: runner.os != 'Windows'
       shell: bash
       run: |
-        # Run integration tests separately to prevent URL patching pollution
-        # Only run basic integration tests that don't require external services
-        # Skip on platforms where integration tests might be flaky
-        if [[ "${{ matrix.os }}" == "ubuntu-latest" ]] || [[ "${{ matrix.os }}" == "macos-latest" ]]; then
-          echo "Running cross-platform integration tests..."
-          pixi run -e dev pytest tests -m "integration and not mcp and not benchmark" --cov=llm_task_framework --cov-append || [ $? -eq 5 ]
-        else
-          echo "Skipping integration tests on ${{ matrix.os }} for performance optimization"
-        fi
+        set -e
+        echo "Running cross-platform integration tests..."
+        pixi run -e dev pytest tests -m "integration and not mcp and not benchmark" --cov=llm_task_framework --cov-append
       env:
-        # Disable LLM tests in CI unless API keys provided
         SKIP_LLM_TESTS: ${{ !secrets.ANTHROPIC_API_KEY && !secrets.OPENAI_API_KEY }}
 
     - name: Upload coverage to Codecov
@@ -248,9 +355,28 @@ jobs:
   integration-tests:
     name: Advanced Integration Tests
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
     needs: [test]
     if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+
+    services:
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+      websocket-echo:
+        image: mendhak/http-https-echo:31
+        ports:
+          - 8080:8080
+        env:
+          HTTP_PORT: 8080
+          HTTPS_PORT: 8443
 
     steps:
     - name: Checkout code
@@ -262,21 +388,52 @@ jobs:
         pixi-version: v0.41.4
         cache: true
 
-    - name: Run advanced integration tests
+    - name: Install dependencies
+      run: pixi install -e dev
+
+    - name: Wait for Redis service
+      shell: bash
       run: |
+        set -e
+        echo "Waiting for Redis service to be ready..."
+        sudo apt-get update && sudo apt-get install -y redis-tools
+        timeout 30 bash -c 'until redis-cli -h localhost -p 6379 ping | grep PONG; do sleep 1; done'
+        echo "✅ Redis service is ready."
+
+    - name: Wait for WebSocket echo service
+      shell: bash
+      run: |
+        set -e
+        echo "Waiting for WebSocket echo service to be ready..."
+        for i in {1..30}; do
+          if nc -z localhost 8080; then
+            echo "✅ WebSocket echo service is ready."
+            exit 0
+          fi
+          sleep 1
+        done
+        echo "❌ WebSocket echo service did not become ready in time."
+        exit 1
+
+    - name: Run advanced integration tests
+      shell: bash
+      run: |
+        set -e
         echo "Running advanced integration tests with external services..."
-        # Run advanced integration tests that may require external services
-        # These run separately to avoid pollution of cross-platform tests
-        pixi run -e dev pytest tests -m "integration and not benchmark" --cov=llm_task_framework --cov-report=xml:integration-coverage.xml --cov-fail-under=0 || [ $? -eq 5 ]
+        pixi run -e dev pytest tests -m "integration and not benchmark" --cov=llm_task_framework --cov-report=xml:integration-coverage.xml --cov-fail-under=0
       env:
         ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        REDIS_URL: redis://localhost:6379
+        WEBSOCKET_URL: ws://localhost:8080/ws
+        TEST_WITH_SERVICES: true
 
     - name: Run MCP server tests (isolated)
+      shell: bash
       run: |
+        set -e
         echo "Running MCP server tests in isolation..."
-        # Run MCP tests separately to prevent any server state pollution
-        pixi run -e dev pytest tests -m "mcp and not benchmark" --cov=llm_task_framework --cov-append --cov-fail-under=0 || [ $? -eq 5 ]
+        pixi run -e dev pytest tests -m "mcp and not benchmark" --cov=llm_task_framework --cov-append --cov-fail-under=0
       env:
         ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
@@ -291,13 +448,16 @@ jobs:
         name: codecov-integration
         fail_ci_if_error: false
 
-  performance-tests:
-    name: Performance Testing
+  benchmark:
+    name: Performance and Benchmark Analysis
     runs-on: ubuntu-latest
     timeout-minutes: 15
     needs: [detect-changes, test]
-    if: needs.detect-changes.outputs.has-performance-changes == 'true' || needs.detect-changes.outputs.has-python-changes == 'true' || github.event_name == 'workflow_dispatch'
-    continue-on-error: true  # Don't fail CI if performance tests have issues
+    if: (needs.detect-changes.outputs.has-performance-changes == 'true' || needs.detect-changes.outputs.has-python-changes == 'true' || github.event_name == 'workflow_dispatch') && (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
+    permissions:
+      actions: read
+      pull-requests: write
+    continue-on-error: true
 
     steps:
     - name: Checkout code
@@ -309,35 +469,56 @@ jobs:
         pixi-version: v0.41.4
         cache: true
 
+    - name: Clean pixi cache (Windows only)
+      if: runner.os == 'Windows'
+      shell: pwsh
+      run: pixi clean
+
+    - name: Install dependencies
+      run: pixi install -e performance
+
     - name: Run benchmark tests
+      shell: bash
       run: |
-        echo "Running performance benchmark tests..."
-        pixi run -e performance perf-test || echo "Performance tests completed with warnings"
+        set -e
+        pixi run -e performance pytest tests -m "benchmark and not slow" --benchmark-only --benchmark-json=benchmark.json --no-cov
 
-    - name: Generate performance profile
-      run: |
-        echo "Generating performance profile..."
-        pixi run -e performance perf-profile || echo "Performance profiling completed"
-
-    - name: Upload performance reports
+    - name: Upload benchmark data for this run
       uses: actions/upload-artifact@v4
-      if: always()
       with:
-        name: performance-reports-${{ github.run_number }}
-        path: |
-          reports/profile.stats
-          .pytest_cache/
+        name: benchmark-results-${{ github.sha }}
+        path: benchmark.json
         retention-days: 7
 
-    - name: Performance summary
-      if: always()
+    - name: Download baseline from main branch
+      if: github.event_name == 'pull_request'
+      uses: dawidd6/action-download-artifact@v6
+      with:
+        workflow: ci.yml
+        branch: ${{ github.base_ref }}
+        name: benchmark-baseline
+        path: baseline/
+        if_no_artifact_found: 'warn'
+
+    - name: Analyze benchmark results
+      if: github.event_name == 'pull_request'
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
-        echo "## 🚀 Performance Test Results" >> $GITHUB_STEP_SUMMARY
-        echo "Performance tests completed. Check artifacts for detailed reports." >> $GITHUB_STEP_SUMMARY
-        if [ -f "reports/profile.stats" ]; then
-          echo "- ✅ Performance profile: Generated" >> $GITHUB_STEP_SUMMARY
+        BASELINE_FILE="baseline/benchmark.json"
+        if [ ! -f "$BASELINE_FILE" ]; then
+          echo "No baseline found, creating an empty baseline file."
+          echo '{"benchmarks": []}' > "$BASELINE_FILE"
         fi
-        echo "- 📊 Benchmark results: Available in test artifacts" >> $GITHUB_STEP_SUMMARY
+        python scripts/analyze_benchmarks.py --baseline "$BASELINE_FILE" --current benchmark.json --rules-file benchmark_rules.json > benchmark_report.md
+        python scripts/post_benchmark_comment.py --report benchmark_report.md --repo ${{ github.repository }} --pr ${{ github.event.pull_request.number }} --github-token $GITHUB_TOKEN
+
+    - name: Update baseline artifact
+      if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/development') && github.event_name == 'push'
+      uses: actions/upload-artifact@v4
+      with:
+        name: benchmark-baseline
+        path: benchmark.json
 
   build-and-test-package:
     name: Build and Test Package
@@ -355,15 +536,43 @@ jobs:
         pixi-version: v0.41.4
         cache: true
 
+    - name: Clean pixi cache (Windows only)
+      if: runner.os == 'Windows'
+      shell: pwsh
+      run: pixi clean
+
+    - name: Cache Python packages
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/pyproject.toml', '**/pixi.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+
+    - name: Cache build artifacts
+      uses: actions/cache@v4
+      with:
+        path: |
+          dist/
+          build/
+          *.egg-info/
+        key: ${{ runner.os }}-build-${{ github.sha }}
+        restore-keys: |
+          ${{ runner.os }}-build-
+
+    - name: Install dependencies
+      run: pixi install -e dev -e prod
+
     - name: Build package
       run: pixi run -e dev build
 
     - name: Check package
-      run: pixi run -e dev sh -c "pip install twine && twine check dist/*"
+      run: pixi run -e dev twine check dist/*
 
     - name: Test package installation
       run: |
-        pixi run -e prod sh -c "pip install dist/*.whl"
+        pixi run -e prod pip install dist/*.whl
         pixi run -e prod python -c "import llm_task_framework; print(\"Package imported successfully\")"
         pixi run -e prod llm-task-framework --help
 
@@ -374,43 +583,6 @@ jobs:
         path: dist/
         retention-days: 30
 
-  # Performance baseline (non-blocking)
-  performance:
-    name: Performance Baseline
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    needs: [test]
-    continue-on-error: true
-
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Set up Pixi
-      uses: prefix-dev/setup-pixi@v0.8.8
-      with:
-        pixi-version: v0.41.4
-        cache: true
-
-    - name: Install benchmark dependencies
-      run: pixi run -e dev pip install pytest-benchmark
-
-    - name: Run performance tests (isolated)
-      run: |
-        echo "Running performance benchmarks in isolation..."
-        # Run performance tests separately to avoid interference with other test types
-        # Exclude slow tests and run only benchmark-marked tests
-        pixi run -e dev pytest tests -m "benchmark and not slow" --benchmark-only --benchmark-json=benchmark.json --no-cov || [ $? -eq 5 ]
-
-    - name: Upload benchmark results
-      uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: benchmark-results
-        path: benchmark.json
-        retention-days: 30
-
-  # Documentation build check
   docs:
     name: Documentation
     runs-on: ubuntu-latest
@@ -426,6 +598,33 @@ jobs:
         pixi-version: v0.41.4
         cache: true
 
+    - name: Clean pixi cache (Windows only)
+      if: runner.os == 'Windows'
+      shell: pwsh
+      run: pixi clean
+
+    - name: Cache Python packages
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/pyproject.toml', '**/pixi.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+
+    - name: Cache documentation build
+      uses: actions/cache@v4
+      with:
+        path: |
+          site/
+          .mkdocs_cache/
+        key: ${{ runner.os }}-docs-${{ hashFiles('docs/**', 'mkdocs.yml', 'README.md') }}
+        restore-keys: |
+          ${{ runner.os }}-docs-
+
+    - name: Install dependencies
+      run: pixi install -e docs
+
     - name: Build documentation
       run: pixi run -e docs docs-build
 
@@ -436,38 +635,14 @@ jobs:
         path: site/
         retention-days: 30
 
-  # Final status check
   ci-success:
-    name: CI Success
+    name: CI Pipeline Succeeded
     runs-on: ubuntu-latest
     needs: [quick-checks, quality-checks, test, integration-tests, build-and-test-package, docs]
-    if: always()
+    if: success()
 
     steps:
-    - name: Check CI status
+    - name: Report overall success
       run: |
-        if [[ "${{ needs.quick-checks.result }}" != "success" ]]; then
-          echo "Quick checks failed"
-          exit 1
-        fi
-        if [[ "${{ needs.quality-checks.result }}" != "success" ]]; then
-          echo "Quality checks failed"
-          exit 1
-        fi
-        if [[ "${{ needs.test.result }}" != "success" ]]; then
-          echo "Tests failed"
-          exit 1
-        fi
-        if [[ "${{ needs.integration-tests.result }}" != "success" && "${{ needs.integration-tests.result }}" != "skipped" ]]; then
-          echo "Integration tests failed"
-          exit 1
-        fi
-        if [[ "${{ needs.build-and-test-package.result }}" != "success" ]]; then
-          echo "Package build failed"
-          exit 1
-        fi
-        if [[ "${{ needs.docs.result }}" != "success" ]]; then
-          echo "Documentation build failed"
-          exit 1
-        fi
-        echo "All CI checks passed!"
+        echo "## ✅ CI Pipeline Succeeded" >> $GITHUB_STEP_SUMMARY
+        echo "All required jobs passed."

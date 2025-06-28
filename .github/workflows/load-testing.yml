@@ -1,0 +1,123 @@
+name: Load Testing
+
+on:
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: "Load test profile to run"
+        required: true
+        default: "light"
+        type: choice
+        options:
+          - light
+          - medium
+          - heavy
+  push:
+    branches:
+      - main
+      - development
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHONPATH: src
+  PYTHONUNBUFFERED: "1"
+  FORCE_COLOR: "1"
+
+jobs:
+  load-test:
+    name: Run Locust Load Test (${{ github.event.inputs.profile || 'light' }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # For baseline comparison
+
+      - name: Set up Pixi
+        uses: prefix-dev/setup-pixi@v0.8.8
+        with:
+          pixi-version: v0.41.4
+          cache: true
+
+      - name: Get load test configuration
+        id: config
+        run: |
+          PROFILE=${{ github.event.inputs.profile || 'light' }}
+          echo "LOAD_TEST_PROFILE=$PROFILE" >> $GITHUB_ENV
+          # Use the config script to get parameters
+          USERS=$(pixi run -e performance python scripts/load_test_config.py --profile $PROFILE --get users)
+          SPAWN_RATE=$(pixi run -e performance python scripts/load_test_config.py --profile $PROFILE --get spawn_rate)
+          RUN_TIME=$(pixi run -e performance python scripts/load_test_config.py --profile $PROFILE --get run_time)
+          echo "users=$USERS" >> $GITHUB_OUTPUT
+          echo "spawn_rate=$SPAWN_RATE" >> $GITHUB_OUTPUT
+          echo "run_time=$RUN_TIME" >> $GITHUB_OUTPUT
+
+      - name: Run Locust load test
+        run: |
+          mkdir -p reports/load-testing
+          pixi run -e performance locust -f locustfile.py \
+            --headless \
+            --users ${{ steps.config.outputs.users }} \
+            --spawn-rate ${{ steps.config.outputs.spawn_rate }} \
+            --run-time ${{ steps.config.outputs.run_time }} \
+            --json reports/load-testing/report.json \
+            --html reports/load-testing/report.html \
+            --csv reports/load-testing/report
+        env:
+          MCP_SERVER_HOST: localhost
+          MCP_SERVER_PORT: 8080
+
+      - name: Upload raw load test reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: load-test-reports-${{ github.run_number }}
+          path: |
+            reports/load-testing/
+          retention-days: 30
+
+      - name: Download baseline report
+        uses: actions/download-artifact@v4
+        with:
+          name: load-test-baseline-main
+          path: reports/load-testing/baseline
+        continue-on-error: true
+
+      - name: Analyze load test results
+        id: analysis
+        run: |
+          pixi run -e performance python scripts/load_test_analysis.py \
+            --current-report reports/load-testing/report.json \
+            --baseline-report reports/load-testing/baseline/report.json \
+            --output-summary reports/load-testing/summary.md
+        continue-on-error: true
+
+      - name: Post results to job summary
+        if: always()
+        run: |
+          echo "## 📈 Load Test Results Summary" >> $GITHUB_STEP_SUMMARY
+          if [ -f "reports/load-testing/summary.md" ]; then
+            cat reports/load-testing/summary.md >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⚠️ Analysis script failed to generate a summary." >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Update baseline report on main branch
+        if: github.ref == 'refs/heads/main'
+        run: |
+          echo "Updating baseline report for main branch..."
+          mkdir -p reports/load-testing/baseline
+          cp reports/load-testing/report.json reports/load-testing/baseline/report.json
+
+      - name: Upload new baseline artifact
+        if: github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@v4
+        with:
+          name: load-test-baseline-main
+          path: reports/load-testing/baseline/report.json
+          retention-days: 90
