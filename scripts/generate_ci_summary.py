@@ -14,6 +14,7 @@ from llm_task_framework.reporting.ci_reporter import (
     ExecutionTimes,
     SecurityResults,
     TestExecutionResults,
+    _open_with_retries,  # Import the new helper
 )
 
 
@@ -66,7 +67,7 @@ def load_benchmark_results(benchmark_file: Path | None) -> dict | None:
         return None
 
     try:
-        with open(benchmark_file) as f:
+        with _open_with_retries(benchmark_file, "r") as f:  # Use robust open
             return json.load(f)
     except Exception as e:
         print(f"Warning: Could not load benchmark results: {e}")
@@ -183,7 +184,10 @@ def main() -> None:
                     times_data = json.loads(args.execution_times)
                 else:
                     # File path
-                    with open(Path(args.execution_times)) as f:
+                    times_file_path = Path(args.execution_times)
+                    with _open_with_retries(
+                        times_file_path, "r"
+                    ) as f:  # Use robust open
                         times_data = json.load(f)
 
                 execution_times = ExecutionTimes(**times_data)
@@ -234,7 +238,9 @@ def main() -> None:
         metrics = reporter.generate_metrics_json(
             test_results, coverage_data, execution_times, security_results
         )
-        with open(args.metrics_json, "w") as f:
+        with (
+            open(args.metrics_json, "w") as f
+        ):  # This is a new file write, not a read, so _open_with_retries is not strictly necessary here, but could be added for consistency if desired.
             json.dump(metrics, f, indent=2)
         print(f"📊 Metrics saved to: {args.metrics_json}")
 

@@ -210,7 +210,9 @@ def test_redis_fallback_when_unavailable() -> None:
         # Test the scenario where redis is installed but the server is unreachable.
         # Mock Redis to raise a connection error.
         with patch("redis.Redis.from_url") as mock_redis:
-            if redis is None:  # This check is for mypy, should not happen at runtime here
+            if (
+                redis is None
+            ):  # This check is for mypy, should not happen at runtime here
                 pytest.fail("Redis module not available when it should be.")
             mock_redis.side_effect = redis.ConnectionError("Connection refused")
 

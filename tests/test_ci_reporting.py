@@ -29,7 +29,9 @@ class TestTestExecutionResults:
 
     def test_completion_rate_calculation(self):
         """Test completion rate calculation."""
-        results = TestExecutionResults(total=100, passed=80, failed=10, skipped=10, errors=0)
+        results = TestExecutionResults(
+            total=100, passed=80, failed=10, skipped=10, errors=0
+        )
         assert results.completion_rate == 90.0  # 80 + 10 completed out of 100
 
         # Edge case: no tests
@@ -60,7 +62,7 @@ class TestExecutionTimes:
             tests=50.0,
             quality_checks=20.0,
             security_scans=5.0,
-            reporting=5.0
+            reporting=5.0,
         )
 
         breakdown = times.get_breakdown_percentages()
@@ -72,7 +74,9 @@ class TestExecutionTimes:
 
     def test_breakdown_percentages_zero_total(self):
         """Test breakdown with zero total time."""
-        times = ExecutionTimes(total=0, setup=0, tests=0, quality_checks=0, security_scans=0, reporting=0)
+        times = ExecutionTimes(
+            total=0, setup=0, tests=0, quality_checks=0, security_scans=0, reporting=0
+        )
         breakdown = times.get_breakdown_percentages()
 
         for percentage in breakdown.values():
@@ -88,7 +92,7 @@ class TestSecurityResults:
             bandit_issues=2,
             safety_vulnerabilities=1,
             pip_audit_vulnerabilities=3,
-            secrets_detected=0
+            secrets_detected=0,
         )
         assert security.total_issues == 6
 
@@ -123,12 +127,23 @@ class TestCIReporter:
         self.reporter = CIReporter(str(self.temp_dir))
 
         # Sample test data
-        self.test_results = TestExecutionResults(total=100, passed=90, failed=5, skipped=5, errors=0)
-        self.coverage_data = CoverageData(total=85.0, line=88.0, branch=82.0, missing_lines=150)
-        self.execution_times = ExecutionTimes(
-            total=300.0, setup=60.0, tests=180.0, quality_checks=30.0, security_scans=20.0, reporting=10.0
+        self.test_results = TestExecutionResults(
+            total=100, passed=90, failed=5, skipped=5, errors=0
         )
-        self.security_results = SecurityResults(bandit_issues=2, safety_vulnerabilities=0, pip_audit_vulnerabilities=1)
+        self.coverage_data = CoverageData(
+            total=85.0, line=88.0, branch=82.0, missing_lines=150
+        )
+        self.execution_times = ExecutionTimes(
+            total=300.0,
+            setup=60.0,
+            tests=180.0,
+            quality_checks=30.0,
+            security_scans=20.0,
+            reporting=10.0,
+        )
+        self.security_results = SecurityResults(
+            bandit_issues=2, safety_vulnerabilities=0, pip_audit_vulnerabilities=1
+        )
 
     def test_generate_ci_summary_basic(self):
         """Test basic CI summary generation."""
@@ -147,7 +162,10 @@ class TestCIReporter:
     def test_generate_ci_summary_with_security(self):
         """Test CI summary generation with security results."""
         summary = self.reporter.generate_ci_summary(
-            self.test_results, self.coverage_data, self.execution_times, self.security_results
+            self.test_results,
+            self.coverage_data,
+            self.execution_times,
+            self.security_results,
         )
 
         assert "Security Scan Results" in summary
@@ -159,12 +177,14 @@ class TestCIReporter:
         """Test CI summary generation with benchmark results."""
         benchmark_results = {
             "regressions": [{"name": "test_benchmark", "severity": "warning"}],
-            "analysis": {"benchmark1": {}, "benchmark2": {}}
+            "analysis": {"benchmark1": {}, "benchmark2": {}},
         }
 
         summary = self.reporter.generate_ci_summary(
-            self.test_results, self.coverage_data, self.execution_times,
-            benchmark_results=benchmark_results
+            self.test_results,
+            self.coverage_data,
+            self.execution_times,
+            benchmark_results=benchmark_results,
         )
 
         assert "Performance Benchmarks" in summary
@@ -176,12 +196,14 @@ class TestCIReporter:
         env_info = {
             "python_version": "3.11.0",
             "runner_os": "ubuntu-latest",
-            "ci_system": "GitHub Actions"
+            "ci_system": "GitHub Actions",
         }
 
         summary = self.reporter.generate_ci_summary(
-            self.test_results, self.coverage_data, self.execution_times,
-            environment_info=env_info
+            self.test_results,
+            self.coverage_data,
+            self.execution_times,
+            environment_info=env_info,
         )
 
         assert "Environment Information" in summary
@@ -193,9 +215,16 @@ class TestCIReporter:
         """Test optimization recommendations generation."""
         # Create conditions that should trigger recommendations
         slow_setup_times = ExecutionTimes(
-            total=500.0, setup=200.0, tests=200.0, quality_checks=50.0, security_scans=40.0, reporting=10.0
+            total=500.0,
+            setup=200.0,
+            tests=200.0,
+            quality_checks=50.0,
+            security_scans=40.0,
+            reporting=10.0,
         )
-        high_skip_results = TestExecutionResults(total=100, passed=70, failed=5, skipped=25, errors=0)
+        high_skip_results = TestExecutionResults(
+            total=100, passed=70, failed=5, skipped=25, errors=0
+        )
 
         summary = self.reporter.generate_ci_summary(
             high_skip_results, self.coverage_data, slow_setup_times
@@ -213,20 +242,27 @@ class TestCIReporter:
         assert output_path.exists()
         assert output_path.read_text() == summary
 
-    @patch.dict('os.environ', {'GITHUB_STEP_SUMMARY': '/tmp/test_step_summary'})
-    @patch('builtins.open', new_callable=mock_open)
+    @patch.dict("os.environ", {"GITHUB_STEP_SUMMARY": "/tmp/test_step_summary"})
+    @patch("builtins.open", new_callable=mock_open)
     def test_save_summary_to_github_step(self, mock_file):
         """Test saving summary to GitHub step summary."""
         summary = "Test CI Summary"
         self.reporter.save_summary_to_github_step(summary)
 
-        mock_file.assert_called_once_with("/tmp/test_step_summary", "a", encoding="utf-8")
+        # Updated to handle Path object from Windows compatibility changes
+        mock_file.assert_called_once()
+        call_args = mock_file.call_args[0]
+        assert str(call_args[0]) == "/tmp/test_step_summary"
+        assert call_args[1] == "a"
         mock_file().write.assert_called_once_with("\nTest CI Summary\n")
 
     def test_generate_metrics_json(self):
         """Test generating machine-readable metrics."""
         metrics = self.reporter.generate_metrics_json(
-            self.test_results, self.coverage_data, self.execution_times, self.security_results
+            self.test_results,
+            self.coverage_data,
+            self.execution_times,
+            self.security_results,
         )
 
         assert "timestamp" in metrics
@@ -251,7 +287,7 @@ class TestCIReporter:
                 "passed": 140,
                 "failed": 5,
                 "skipped": 5,
-                "error": 0
+                "error": 0,
             }
         }
 
@@ -295,7 +331,9 @@ class TestCIReporter:
         # Create mock security reports
         bandit_data = {"results": [{"issue": "test1"}, {"issue": "test2"}]}
         safety_data = [{"vulnerability": "test1"}]
-        pip_audit_data = {"vulnerabilities": [{"package": "test1"}, {"package": "test2"}]}
+        pip_audit_data = {
+            "vulnerabilities": [{"package": "test1"}, {"package": "test2"}]
+        }
 
         reports_dir = self.temp_dir / "security_reports"
         reports_dir.mkdir()
@@ -329,6 +367,7 @@ class TestCIReporter:
     def teardown_method(self):
         """Clean up test fixtures."""
         import shutil
+
         shutil.rmtree(self.temp_dir, ignore_errors=True)
 
 
@@ -341,14 +380,31 @@ class TestCIReporterIntegration:
             reporter = CIReporter(temp_dir)
 
             # Create comprehensive test data (all passing for successful CI)
-            test_results = TestExecutionResults(total=200, passed=195, failed=0, skipped=5, errors=0)
-            coverage_data = CoverageData(total=92.5, line=94.0, branch=91.0, missing_lines=45)
-            execution_times = ExecutionTimes(
-                total=420.0, setup=80.0, tests=250.0, quality_checks=60.0, security_scans=20.0, reporting=10.0
+            test_results = TestExecutionResults(
+                total=200, passed=195, failed=0, skipped=5, errors=0
             )
-            security_results = SecurityResults(bandit_issues=0, safety_vulnerabilities=0, pip_audit_vulnerabilities=0)
-            benchmark_results = {"regressions": [], "analysis": {"test1": {}, "test2": {}}}
-            environment_info = {"python_version": "3.11.5", "ci_system": "GitHub Actions"}
+            coverage_data = CoverageData(
+                total=92.5, line=94.0, branch=91.0, missing_lines=45
+            )
+            execution_times = ExecutionTimes(
+                total=420.0,
+                setup=80.0,
+                tests=250.0,
+                quality_checks=60.0,
+                security_scans=20.0,
+                reporting=10.0,
+            )
+            security_results = SecurityResults(
+                bandit_issues=0, safety_vulnerabilities=0, pip_audit_vulnerabilities=0
+            )
+            benchmark_results = {
+                "regressions": [],
+                "analysis": {"test1": {}, "test2": {}},
+            }
+            environment_info = {
+                "python_version": "3.11.5",
+                "ci_system": "GitHub Actions",
+            }
 
             # Generate summary
             summary = reporter.generate_ci_summary(
@@ -357,7 +413,7 @@ class TestCIReporterIntegration:
                 execution_times=execution_times,
                 security_results=security_results,
                 benchmark_results=benchmark_results,
-                environment_info=environment_info
+                environment_info=environment_info,
             )
 
             # Verify summary content
@@ -376,7 +432,9 @@ class TestCIReporterIntegration:
             assert len(summary_path.read_text()) > 0
 
             # Generate and verify metrics JSON
-            metrics = reporter.generate_metrics_json(test_results, coverage_data, execution_times, security_results)
+            metrics = reporter.generate_metrics_json(
+                test_results, coverage_data, execution_times, security_results
+            )
             assert isinstance(metrics, dict)
             assert metrics["performance_metrics"]["test_success_rate"] == 97.5
             assert metrics["performance_metrics"]["coverage_grade"] == "A"

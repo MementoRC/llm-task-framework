@@ -79,9 +79,14 @@ def main() -> None:
     reporter = BenchmarkReporter()
 
     try:
-        baseline_data: list[dict[str, Any]] = analyzer.load_benchmark_data(args.baseline)
+        baseline_data: list[dict[str, Any]] = analyzer.load_benchmark_data(
+            args.baseline
+        )
     except FileNotFoundError:
-        print(f"Baseline file not found at {args.baseline}. Assuming empty baseline.", file=sys.stderr)
+        print(
+            f"Baseline file not found at {args.baseline}. Assuming empty baseline.",
+            file=sys.stderr,
+        )
         baseline_data = []
 
     current_data: list[dict[str, Any]] = analyzer.load_benchmark_data(args.current)

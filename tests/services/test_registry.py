@@ -74,7 +74,9 @@ class TestServiceRegistry:
     def test_register_with_config_and_priority(self, registry, mock_containers):
         """Test registering a service with configuration and priority."""
         config = {"timeout": 30, "retries": 3}
-        registry.register("redis", mock_containers["redis"], config=config, startup_priority=1)
+        registry.register(
+            "redis", mock_containers["redis"], config=config, startup_priority=1
+        )
 
         assert registry.get_service_config("redis") == config
         assert registry._startup_order == ["redis"]
@@ -193,7 +195,9 @@ class TestServiceRegistry:
         # Create a container that raises an exception during health check
         mock_container = MagicMock()
         mock_container.service_name = "faulty"
-        mock_container.health_check = AsyncMock(side_effect=Exception("Health check failed"))
+        mock_container.health_check = AsyncMock(
+            side_effect=Exception("Health check failed")
+        )
 
         registry.register("faulty", mock_container)
 

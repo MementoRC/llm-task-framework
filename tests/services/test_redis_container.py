@@ -113,7 +113,9 @@ class TestRedisServiceContainerWithMocks:
         with (
             patch("llm_task_framework.services.redis_container.REDIS_AVAILABLE", True),
             patch("llm_task_framework.services.redis_container.redis") as mock_redis,
-            patch("llm_task_framework.services.redis_container.async_redis") as mock_async_redis,
+            patch(
+                "llm_task_framework.services.redis_container.async_redis"
+            ) as mock_async_redis,
         ):
             # Setup mock sync client
             mock_sync_client = MagicMock()

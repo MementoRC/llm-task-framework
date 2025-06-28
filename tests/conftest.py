@@ -229,6 +229,7 @@ def redis_client() -> Generator[Any, None, None]:
 
     try:
         import redis as redis_module
+
         # If import succeeds, override with specific Redis exceptions
         RedisConnectionError = redis_module.ConnectionError
         RedisTimeoutError = redis_module.TimeoutError

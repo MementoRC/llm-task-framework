@@ -246,7 +246,7 @@ python = ">=3.10,<3.13"
 # Development tasks
 [tool.pixi.tasks]
 install = "python -m pip install -e ."
-clean = "rm -rf build/ dist/ *.egg-info/ .pytest_cache/ .coverage htmlcov/ .mypy_cache/ .ruff_cache/"
+clean = "python -c \"import shutil, pathlib; for d in ['build', 'dist', '.pytest_cache', 'htmlcov', '.mypy_cache', '.ruff_cache']: p = pathlib.Path(d); p.is_dir() and shutil.rmtree(p, ignore_errors=True); for e in pathlib.Path('.').glob('*.egg-info'): e.is_dir() and shutil.rmtree(e, ignore_errors=True); pathlib.Path('.coverage').unlink(missing_ok=True)\""
 
 # Testing tasks
 test = "pytest"
@@ -275,7 +275,7 @@ security-secrets = "detect-secrets scan --baseline .secrets.baseline --all-files
 security-supply-chain = "python -c \"import pkg_resources; print('Supply chain verification: OK')\""
 security-comprehensive = { depends-on = ["security-static", "security-deps", "security-audit", "security-secrets", "security-supply-chain"] }
 security-all = { depends-on = ["security-comprehensive"] }
-security-ci = "mkdir -p reports && echo 'Starting security scans...' && pixi run -e security security-comprehensive"
+security-ci = "python -c \"import os; os.makedirs('reports', exist_ok=True)\" && echo 'Starting security scans...' && pixi run -e security security-comprehensive"
 
 # Documentation tasks
 docs-build = "mkdocs build"

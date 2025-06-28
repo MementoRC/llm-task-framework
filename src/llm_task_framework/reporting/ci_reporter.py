@@ -39,6 +39,34 @@ def _ensure_windows_compatible_text(text: str) -> str:
     return text
 
 
+def _open_with_retries(
+    file_path: Path,
+    mode: str,
+    encoding: str | None = "utf-8",
+    max_attempts: int = 3,
+    delay: float = 0.1,
+) -> Any:
+    """
+    Opens a file with retry logic for robustness against temporary locks (e.g., by antivirus).
+    Ensures consistent encoding.
+    """
+    for attempt in range(max_attempts):
+        try:
+            # If mode is binary ('rb', 'wb', 'ab'), encoding should be None
+            if "b" in mode:
+                return open(file_path, mode)
+            else:
+                return open(file_path, mode, encoding=encoding)
+        except (OSError, PermissionError) as e:
+            if attempt < max_attempts - 1:
+                print(
+                    f"Warning: Failed to open {file_path} (attempt {attempt + 1}/{max_attempts}): {e}. Retrying..."
+                )
+                time.sleep(delay * (2**attempt))
+            else:
+                raise  # Re-raise after max attempts
+
+
 @dataclass
 class TestExecutionResults:
     """Test execution results summary."""
@@ -484,11 +512,14 @@ class CIReporter:
             summary: The CI summary content
             step_summary_file: Path to GitHub step summary file (defaults to GITHUB_STEP_SUMMARY env var)
         """
-        step_summary_path = step_summary_file or os.environ.get("GITHUB_STEP_SUMMARY")
+        step_summary_path_str = step_summary_file or os.environ.get(
+            "GITHUB_STEP_SUMMARY"
+        )
 
-        if step_summary_path:
+        if step_summary_path_str:
             try:
-                with open(step_summary_path, "a", encoding="utf-8") as f:
+                step_summary_path = Path(step_summary_path_str)
+                with _open_with_retries(step_summary_path, "a") as f:
                     f.write("\n" + summary + "\n")
             except Exception as e:
                 print(f"Warning: Could not write to GitHub step summary: {e}")
@@ -509,7 +540,7 @@ class CIReporter:
             Path to the saved file
         """
         output_path = self.reports_dir / filename
-        with open(output_path, "w", encoding="utf-8") as f:
+        with _open_with_retries(output_path, "w") as f:
             f.write(summary)
         return output_path
 
@@ -565,7 +596,7 @@ class CIReporter:
             return TestExecutionResults(0, 0, 0, 0, 0)
 
         try:
-            with open(json_file) as f:
+            with _open_with_retries(json_file, "r") as f:
                 data = json.load(f)
 
             summary = data.get("summary", {})
@@ -600,13 +631,19 @@ class CIReporter:
                     parse as safe_parse,
                 )
 
-                tree = safe_parse(xml_file)
+                with _open_with_retries(
+                    xml_file, "rb"
+                ) as f:  # Open in binary mode for XML parsing
+                    tree = safe_parse(f)
                 root = tree.getroot()
             except ImportError:
                 # Fallback to standard library with warning
                 import xml.etree.ElementTree as ET  # nosec B405
 
-                tree = ET.parse(xml_file)  # nosec B314
+                with _open_with_retries(
+                    xml_file, "rb"
+                ) as f:  # Open in binary mode for XML parsing
+                    tree = ET.parse(f)  # nosec B314
                 root = tree.getroot()
 
             # Extract coverage percentages
@@ -642,7 +679,7 @@ class CIReporter:
         bandit_file = reports_dir / "bandit-report.json"
         if bandit_file.exists():
             try:
-                with open(bandit_file) as f:
+                with _open_with_retries(bandit_file, "r") as f:
                     bandit_data = json.load(f)
                 security_results.bandit_issues = len(bandit_data.get("results", []))
             except Exception as e:
@@ -652,7 +689,7 @@ class CIReporter:
         safety_file = reports_dir / "safety-report.json"
         if safety_file.exists():
             try:
-                with open(safety_file) as f:
+                with _open_with_retries(safety_file, "r") as f:
                     safety_data = json.load(f)
                 # Safety format can vary, check for vulnerabilities
                 if isinstance(safety_data, list):
@@ -668,7 +705,7 @@ class CIReporter:
         pip_audit_file = reports_dir / "pip-audit-report.json"
         if pip_audit_file.exists():
             try:
-                with open(pip_audit_file) as f:
+                with _open_with_retries(pip_audit_file, "r") as f:
                     pip_audit_data = json.load(f)
                 security_results.pip_audit_vulnerabilities = len(
                     pip_audit_data.get("vulnerabilities", [])
