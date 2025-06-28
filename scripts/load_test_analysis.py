@@ -14,7 +14,7 @@ Usage:
 import argparse
 import json
 from pathlib import Path
-from typing import Any
+from typing import Any, Dict
 
 # Thresholds for regression detection
 REGRESSION_THRESHOLDS = {
@@ -30,7 +30,8 @@ def parse_locust_report(report_path: Path) -> dict[str, Any] | None:
         return None
     try:
         with open(report_path) as f:
-            return json.load(f)
+            data: Dict[str, Any] = json.load(f)
+            return data
     except (OSError, json.JSONDecodeError):
         return None
 

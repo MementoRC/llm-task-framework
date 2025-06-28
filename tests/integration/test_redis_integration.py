@@ -6,21 +6,25 @@ Based on patterns from candles-feed and hb-strategy-sandbox projects.
 
 import os
 import time
+import types
 from unittest.mock import patch
 
 import pytest
 
 # Try to import redis, but gracefully handle if not available
+redis: types.ModuleType | None = None
+REDIS_AVAILABLE = False
 try:
-    import redis
+    import redis as _redis_module
 
+    redis = _redis_module
     REDIS_AVAILABLE = True
 except ImportError:
-    REDIS_AVAILABLE = False
-    redis = None  # type: ignore[assignment]
+    # redis remains None
+    pass
 
 
-def _decode_redis_value(value):
+def _decode_redis_value(value: bytes | str | None) -> str | None:
     """Helper function to handle Redis values that may be bytes or strings."""
     if value is None:
         return None
@@ -195,7 +199,7 @@ def test_redis_transaction(redis_client):
 
 
 @pytest.mark.integration
-def test_redis_fallback_when_unavailable():
+def test_redis_fallback_when_unavailable() -> None:
     """Test graceful fallback when Redis is unavailable."""
     if not REDIS_AVAILABLE:
         # Test the scenario where redis is not installed.
@@ -206,6 +210,8 @@ def test_redis_fallback_when_unavailable():
         # Test the scenario where redis is installed but the server is unreachable.
         # Mock Redis to raise a connection error.
         with patch("redis.Redis.from_url") as mock_redis:
+            if redis is None:  # This check is for mypy, should not happen at runtime here
+                pytest.fail("Redis module not available when it should be.")
             mock_redis.side_effect = redis.ConnectionError("Connection refused")
 
             redis_url = os.getenv("REDIS_URL", "redis://localhost:6379")
@@ -256,7 +262,7 @@ def test_redis_performance_basic(redis_client):
 
 @pytest.mark.integration
 @pytest.mark.network
-def test_redis_connection_pool():
+def test_redis_connection_pool() -> None:
     """Test Redis connection pooling functionality."""
     if not REDIS_AVAILABLE:
         pytest.skip("Redis library not available")
@@ -268,6 +274,8 @@ def test_redis_connection_pool():
         pytest.skip("Service container testing disabled")
 
     try:
+        if redis is None:  # This check is for mypy, should not happen at runtime here
+            pytest.fail("Redis module not available when it should be.")
         # Create connection pool
         pool = redis.ConnectionPool.from_url(redis_url, max_connections=10)
 
@@ -295,10 +303,13 @@ def test_redis_connection_pool():
 
 
 @pytest.mark.integration
-def test_redis_error_handling():
+def test_redis_error_handling() -> None:
     """Test proper error handling for Redis operations."""
     if not REDIS_AVAILABLE:
         pytest.skip("Redis library not available")
+
+    if redis is None:  # This check is for mypy, should not happen at runtime here
+        pytest.fail("Redis module not available when it should be.")
 
     # Test with invalid Redis URL
     with pytest.raises(redis.ConnectionError):
@@ -329,7 +340,7 @@ def test_redis_service_container_demo(redis_service_container):
 
     loop = asyncio.get_event_loop()
 
-    async def async_demo():
+    async def async_demo() -> str:
         await async_client.set("async_demo_key", "async_demo_value")
         result = await async_client.get("async_demo_key")
         return result
