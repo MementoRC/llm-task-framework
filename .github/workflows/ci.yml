@@ -153,6 +153,11 @@ jobs:
         pixi-version: v0.41.4
         cache: true
 
+    - name: Clean pixi cache (Windows only)
+      if: runner.os == 'Windows'
+      shell: pwsh
+      run: pixi clean
+
     - name: Cache Python packages
       uses: actions/cache@v4
       with:
@@ -278,15 +283,20 @@ jobs:
         pixi-version: v0.41.4
         cache: true
 
+    - name: Clean pixi cache (Windows only)
+      if: runner.os == 'Windows'
+      shell: pwsh
+      run: pixi clean
+
     - name: Cache Python packages (matrix-specific)
       uses: actions/cache@v4
       with:
         path: |
           ~/.cache/pip
         key: ${{ runner.os }}-${{ matrix.python-version }}-pip-${{ hashFiles('**/pyproject.toml', '**/pixi.lock') }}
+        # Removed the less specific restore-key to avoid potential conflicts
         restore-keys: |
           ${{ runner.os }}-${{ matrix.python-version }}-pip-
-          ${{ runner.os }}-pip-
 
     - name: Cache test fixtures and pytest cache
       uses: actions/cache@v4
@@ -316,6 +326,7 @@ jobs:
       if: runner.os == 'Windows'
       shell: pwsh
       run: |
+        $ErrorActionPreference = "Stop" # Ensure script stops on first error
         echo "Running ${{ matrix.test-category }} tests for ${{ matrix.os }} Python ${{ matrix.python-version }}..."
         pixi run -e dev pytest tests -m "${{ matrix.pytest-marker }}" --cov=llm_task_framework --cov-report=xml:coverage.xml --cov-report=term
       env:
@@ -458,6 +469,11 @@ jobs:
         pixi-version: v0.41.4
         cache: true
 
+    - name: Clean pixi cache (Windows only)
+      if: runner.os == 'Windows'
+      shell: pwsh
+      run: pixi clean
+
     - name: Install dependencies
       run: pixi install -e performance
 
@@ -520,6 +536,11 @@ jobs:
         pixi-version: v0.41.4
         cache: true
 
+    - name: Clean pixi cache (Windows only)
+      if: runner.os == 'Windows'
+      shell: pwsh
+      run: pixi clean
+
     - name: Cache Python packages
       uses: actions/cache@v4
       with:
@@ -576,6 +597,11 @@ jobs:
       with:
         pixi-version: v0.41.4
         cache: true
+
+    - name: Clean pixi cache (Windows only)
+      if: runner.os == 'Windows'
+      shell: pwsh
+      run: pixi clean
 
     - name: Cache Python packages
       uses: actions/cache@v4
