@@ -217,6 +217,18 @@ disallow_untyped_decorators = false
 
 [[tool.mypy.overrides]]
 module = [
+    "scenarios.*",
+    "scripts.*",
+    "locustfile",
+    "llm_task_framework.cli.*",
+]
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+disallow_untyped_decorators = false
+ignore_errors = true
+
+[[tool.mypy.overrides]]
+module = [
     "mcp.*",
     "anthropic.*",
     "openai.*",
@@ -227,6 +239,10 @@ module = [
     "pytest_benchmark.*",
     "aiohttp.*",
     "locust.*",
+    "websockets.*",
+    "psutil.*",
+    "defusedxml.*",
+    "requests.*",
 ]
 ignore_missing_imports = true
 

@@ -359,8 +359,8 @@ class TestDataProcessingBenchmarks:
             processed_count = 0
             for record in dataset:
                 values = record["values"]
-                if len(values) > 50:
-                    record["metadata"]["processed"] = True
+                if len(values) > 50:  # type: ignore[arg-type]
+                    record["metadata"]["processed"] = True  # type: ignore[index]
                     processed_count += 1
 
             return processed_count

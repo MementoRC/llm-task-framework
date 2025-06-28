@@ -26,8 +26,8 @@ try:
     REDIS_AVAILABLE = True
 except ImportError:
     REDIS_AVAILABLE = False
-    redis = None  # type: ignore[assignment]
-    async_redis = None  # type: ignore[assignment]
+    redis = None
+    async_redis = None
 
 
 class RedisServiceContainer:

@@ -68,7 +68,7 @@ def load_benchmark_results(benchmark_file: Path | None) -> dict | None:
 
     try:
         with _open_with_retries(benchmark_file, "r") as f:  # Use robust open
-            return json.load(f)
+            return json.load(f)  # type: ignore[no-any-return]
     except Exception as e:
         print(f"Warning: Could not load benchmark results: {e}")
         return None

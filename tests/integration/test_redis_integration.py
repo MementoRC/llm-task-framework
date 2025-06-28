@@ -300,7 +300,7 @@ def test_redis_connection_pool() -> None:
         # Close pool
         pool.disconnect()
 
-    except (redis.ConnectionError, redis.TimeoutError) as e:
+    except (redis.ConnectionError, redis.TimeoutError) as e:  # type: ignore[union-attr]
         pytest.skip(f"Redis connection failed: {e}")
 
 
@@ -345,7 +345,7 @@ def test_redis_service_container_demo(redis_service_container):
     async def async_demo() -> str:
         await async_client.set("async_demo_key", "async_demo_value")
         result = await async_client.get("async_demo_key")
-        return result
+        return result  # type: ignore[no-any-return]
 
     result = loop.run_until_complete(async_demo())
     assert result == "async_demo_value"
