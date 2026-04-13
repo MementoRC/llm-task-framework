@@ -36,27 +36,27 @@ classifiers = [
 requires-python = ">=3.10"
 dependencies = [
     # Core framework dependencies
-    "pydantic>=2.0.0",
-    "rich>=13.0.0",
-    "click>=8.0.0",
+    "pydantic>=2.12.5",
+    "rich>=15.0.0",
+    "click>=8.3.2",
     
     # MCP server dependencies
-    "mcp>=1.0.0",
-    "anyio>=4.0.0",
+    "mcp>=1.27.0",
+    "anyio>=4.13.0",
     
     # LLM provider dependencies
-    "anthropic>=0.25.0",
-    "openai>=1.12.0",
+    "anthropic>=0.94.0",
+    "openai>=2.31.0",
     
     # Async and performance
-    "asyncio-throttle>=1.0.0",
-    "aiofiles>=23.0.0",
+    "asyncio-throttle>=1.0.2",
+    "aiofiles>=25.1.0",
     
     # Utilities
-    "pyyaml>=6.0.0",
-    "toml>=0.10.0",
+    "pyyaml>=6.0.3",
+    "toml>=0.10.2",
     "pathlib",
-    "dataclasses-json>=0.6.0",
+    "dataclasses-json>=0.6.7",
 ]
 dynamic = ["version"]
 
@@ -88,9 +88,9 @@ pytest_analysis = [
 
 docstring_generation = [
     # Docstring generation task dependencies
-    "ast-decompiler>=0.7.0",
-    "black>=23.0.0",
-    "libcst>=1.0.0",
+    "ast-decompiler>=0.8.0",
+    "black>=26.3.1",
+    "libcst>=1.8.6",
 ]
 
 all = [
