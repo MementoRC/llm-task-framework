@@ -1,5 +1,5 @@
 [build-system]
-requires = ["hatchling>=1.21.0"]
+requires = ["hatchling>=1.29.0"]
 build-backend = "hatchling.build"
 
 [project]
@@ -63,27 +63,27 @@ dynamic = ["version"]
 [project.optional-dependencies]
 dev = [
     # Testing
-    "pytest>=7.0.0",
-    "pytest-asyncio>=0.21.0",
-    "pytest-cov>=4.0.0",
-    "pytest-mock>=3.10.0",
+    "pytest>=9.0.3",
+    "pytest-asyncio>=1.3.0",
+    "pytest-cov>=7.1.0",
+    "pytest-mock>=3.15.1",
     
     # Code quality
-    "ruff>=0.1.0",
-    "mypy>=1.5.0",
-    "pre-commit>=3.0.0",
+    "ruff>=0.15.10",
+    "mypy>=1.20.1",
+    "pre-commit>=4.5.1",
     
     # Development tools
-    "hatch>=1.7.0",
-    "build>=0.10.0",
-    "twine>=4.0.0",
+    "hatch>=1.16.5",
+    "build>=1.4.3",
+    "twine>=6.2.0",
 ]
 
 pytest_analysis = [
     # Pytest-specific task dependencies
-    "pytest>=7.0.0",
+    "pytest>=9.0.3",
     "pytest-json-report>=1.5.0",
-    "pytest-html>=3.1.0",
+    "pytest-html>=4.2.0",
 ]
 
 docstring_generation = [
@@ -126,11 +126,11 @@ include = [
 
 [tool.hatch.envs.default]
 dependencies = [
-    "pytest>=7.0.0",
-    "pytest-asyncio>=0.21.0",
-    "pytest-cov>=4.0.0",
-    "ruff>=0.1.0",
-    "mypy>=1.5.0",
+    "pytest>=9.0.3",
+    "pytest-asyncio>=1.3.0",
+    "pytest-cov>=7.1.0",
+    "ruff>=0.15.10",
+    "mypy>=1.20.1",
 ]
 
 [tool.hatch.envs.default.scripts]
